@@ -1,0 +1,15 @@
+material uw_purple
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+          ambient 0.2 0 0.435 1
+	  diffuse 0.2 0 0.435 1
+          emissive 0 0 0 0
+      }
+    }
+  }
+}

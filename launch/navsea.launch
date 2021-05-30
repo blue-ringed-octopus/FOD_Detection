@@ -1,0 +1,27 @@
+<launch>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find navsea)/worlds/navsea.world"/>
+    <!-- more default parameters can be changed here -->
+  </include>
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="x_pos" default="0.0"/>
+  <arg name="y_pos" default="0.0"/>
+  <arg name="z_pos" default="1.0"/>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find navsea)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -Y 3.1415 -param robot_description" />
+ 
+ <node
+    name="robot_state_publisher"
+    pkg="robot_state_publisher"
+    type="robot_state_publisher" />
+
+  <node type="rviz" name="rvizscan" pkg="rviz" args="-d $(find navsea)/rviz/viz.rviz" />
+
+  
+  <node pkg="tf" type="static_transform_publisher" name="wheel_tf_left" args="-0.144 0.144 0.023 3.14 0 1.57 /base_link /wheel_left_back_link 5"/>
+  <node pkg="tf" type="static_transform_publisher" name="wheel_tf_right" args="-0.144 -0.144 0.023 3.14 0 1.57 /base_link /wheel_right_back_link 5"/>
+
+</launch>
