@@ -88,10 +88,10 @@
 
       
 
-      <!-- <publishOdomTF>true</publishOdomTF>
-       <publishTf>true</publishTf> -->
-       <publishOdomTF>false</publishOdomTF>
-       <publishTf>false</publishTf> 
+       <publishOdomTF>true</publishOdomTF>
+       <publishTf>true</publishTf> 
+    <!--   <publishOdomTF>false</publishOdomTF>
+       <publishTf>false</publishTf> -->
 
       <robotBaseFrame>base_footprint</robotBaseFrame>
       <publishWheelTF>true</publishWheelTF>

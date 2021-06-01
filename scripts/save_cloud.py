@@ -16,7 +16,6 @@ import threading
 import time
 import open3d as o3d
 import copy
-import colorsys as cs
 import random
 import scipy as sp
 import os
@@ -25,8 +24,6 @@ from rtabmap_ros.srv import GetMap
 from rtabmap_ros.srv import PublishMap
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2
-from scipy.interpolate import RegularGridInterpolator 
-from scipy.cluster import hierarchy
 
 rospack=rospkg.RosPack()
 navsea=rospack.get_path('navsea')
@@ -35,11 +32,7 @@ navsea=rospack.get_path('navsea')
 x = loadmat(navsea+'/scripts/FOD_detection_var.mat')
 cov_global=np.array(x['cov_global'])
 CAD=np.array(x['CAD_points'])
-Sparse_CAD=np.array(x['CAD_points_Sparse'])
-Mdist_table=np.array(x['Mdist_table'])
-xgrid=np.reshape(np.array(x['x']),(-1))
-ygrid=np.reshape(np.array(x['y']),(-1))
-zgrid=np.reshape(np.array(x['z']),(-1))
+
 
 #----------------------Global variables----------------
 done=False
@@ -47,10 +40,10 @@ map_data=None
 icp_thres=5
 
 #-----------------------Functions----------------------
-def loop_input():
+def loop_input(prompt):
 	inp=""
 	while inp.lower()!='y' and inp.lower()!='n':
-		inp=raw_input("Save result?(y/n): \n")
+		inp=raw_input(prompt+"(y/n): \n")
 	save=inp.lower()=='y'
 	return save
 
@@ -116,20 +109,12 @@ def crop_cloud(cloud,xlim,ylim,zlim):
 			croped_points.append(point)		
 	return croped_points
 
-def M_dist_interp(cloudPoints):
-	interpreter=RegularGridInterpolator((xgrid,ygrid,zgrid),values=Mdist_table, method="linear", bounds_error=False)	
-	mdist=interpreter(cloudPoints)
-	return mdist
 
 def cloud_from_points(points):
 	tempcloud=o3d.PointCloud()
 	tempcloud.points=o3d.Vector3dVector(np.asarray(points))
 	return tempcloud
 
-def Isolate_fod(cloud,mdist, cutoff):
-	fod_points=cloud[mdist>=cutoff]
-	tank_points=cloud[mdist<cutoff]
-	return (fod_points, tank_points)
 def random_downsample(cloud, percentage):
 	og_size=len(np.asarray(cloud.points))
 	ds_size=int(np.floor(len(np.asarray(cloud.points))*percentage))
@@ -150,69 +135,66 @@ def save_mat(path, file_name, cloud):
 	filename_num=get_file_name(path, file_name)
 	sp.io.savemat(filename_num, mdic)
 	print("saved to: "+filename_num)
-def save_cloud():
-	print("FOD detection module started")
-# get map from rtabmap
+
+def save_raw_cloud():
+	# get map from rtabmap
 	raw_cloud=None
-	while raw_cloud==None or len(raw_cloud.points)==0:
-		get_map_client()
-		raw_cloud=msg2pc(map_data)
+	try:
+		while raw_cloud==None or len(raw_cloud.points)==0:
+			get_map_client()
+			raw_cloud=msg2pc(map_data)
+	except KeyboardInterrupt:
+		print("Terminating")
 	print("Got Map")
 
-  	#drawcloud([cloud], size=0.1)
-	CAD_cloud=o3d.PointCloud()
 
-	CAD_cloud.points=o3d.Vector3dVector(CAD)
 	print("raw cloud size:"+str(len(np.asarray(raw_cloud.points))))
+	
+	if (loop_input("Plot raw cloud?")):
+		drawcloud([raw_cloud], size=5)	
 
-# Process map
-	#----------------------------ICP align---------------- 	
+	if (loop_input("Save raw cloud?")):
+		save_mat(path=navsea+"/output/Trial_PC/", file_name="Raw_Cloud", cloud=raw_cloud)
+
+	return raw_cloud
+
+def icp_cloud(raw_cloud):
+	CAD_cloud=o3d.PointCloud()
+	CAD_cloud.points=o3d.Vector3dVector(CAD)
 	cloud_icp_ds=o3d.voxel_down_sample(raw_cloud,0.01)
 	cloud_icp_ds=random_downsample(cloud_icp_ds,percentage=0.2)
-	print("Align map with CAD model...")
+	print("Aligning map with CAD model...")
 	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
 	tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
-	#draw_registration_result(cloud_icp_ds,CAD_cloud,tf_init)
-	
 	tf1=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,tf_init,o3d.TransformationEstimationPointToPoint())
 	
-	#draw_registration_result(cloud_icp_ds,CAD_cloud,tf1.transformation)
-
-    	#raw_cloud.transform(tf.transformation)
 	cloud_icp_ds.transform(tf1.transformation)
 
 	croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
 	cloud_icp_ds.points=o3d.Vector3dVector(croped_points)
 
-	tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
+	tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],		 		 						[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
 
 	tf=np.matmul(tf2.transformation,tf1.transformation)
     	raw_cloud.transform(tf)
 	croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
 	cropped_cloud=o3d.PointCloud()
 	cropped_cloud.points=o3d.Vector3dVector(croped_points)
-	
-	#drawcloud([raw_cloud], size=5)	
-	
-
 	cloud=random_downsample(cropped_cloud,percentage=0.05)
 	cloud=o3d.voxel_down_sample(cropped_cloud,0.0075)
+	return cloud, CAD_cloud
 
-	#------------------calculate m-distance------------------------
-	mdist=M_dist_interp(np.asarray(cloud.points))
-	cloud.paint_uniform_color([0.2,0.2,0.2])
-	np.asarray(cloud.colors)[np.where(np.isnan(mdist))[0],:]=[0,1,1]
-	np.asarray(cloud.colors)[np.where(np.isinf(mdist))[0],:]=[0,1,1]
-	mdist[np.where(np.isnan(mdist))]=0
-	mdist[np.where(np.isinf(mdist))]=np.max(mdist)
-	np.asarray(cloud.colors)[np.where(mdist>2.5)[0],:]=[1,0,0] #2.5
-	
-  	drawcloud([cloud], size=0.1)
-	#Save Cloud for ML
-	if (loop_input()):
-		save_mat(path=navsea+"/output/Trial_PC/", file_name="Trial_PC", cloud=raw_cloud)
+def save_cloud():
+	raw_cloud=save_raw_cloud()
+	aligned_cloud, CAD_cloud=icp_cloud(raw_cloud)
+	return aligned_cloud, CAD_cloud
 
 if __name__ == "__main__":
-	rospy.init_node('FOD_Detection',anonymous=False)
-	save_cloud()
+	try:
+		rospy.init_node('FOD_Detection',anonymous=False)
+		save_cloud()	
+	except KeyboardInterrupt:
+		print("Terminating")
+
+
 

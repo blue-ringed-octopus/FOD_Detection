@@ -134,7 +134,14 @@
 
   <!-- Nodes -->
   <group ns="$(arg namespace)">
-     
+
+  <node name="map_assembler" pkg="rtabmap_ros" type="map_assembler">
+  <param name="cloud_output_voxelized" type="bool" value="false"/> 
+  <param name="Grid/RangeMax"        value="1.5"/>
+  <param name="Grid/cloud_subtrack_filtering_min_neighbors"	value="10"/>
+  <param name="Grid/DepthDecimation" value="1"/>
+  <!-- <param name="regenerate_local_grids" type="double" value="true"/> -->
+</node>	
     <!-- relays -->
     <group if="$(arg depth)">
       <group unless="$(arg subscribe_rgbd)">

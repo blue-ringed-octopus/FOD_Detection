@@ -8,6 +8,7 @@ Created on Mon Jan  18 23:13:00 2021
 """
 #requires pip install open3d-python==0.3.0.0
 import FOD_Detection as fd
+import save_cloud
 import numpy as np
 import ros_numpy
 import rospy 
@@ -67,13 +68,13 @@ def Cloud2CADtf(tf_init):
 # get map from rtabmap
 	get_map_client()
 	print("Got Map")
-	cloud=fd.msg2pc(map_data)
+	cloud=save_cloud.msg2pc(map_data)
 	CAD_cloud=o3d.PointCloud()
 	CAD_cloud.points=o3d.Vector3dVector(CAD)
 	print("cloud size:"+str(len(np.asarray(cloud.points))))
 # Process map
 	#----------------------------ICP align---------------- 	
-	cloud_icp_ds=fd.random_downsample(cloud,percentage=0.1)
+	cloud_icp_ds=save_cloud.random_downsample(cloud,percentage=0.1)
 	print("Align map with CAD model...")
 	tf1=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,tf_init,o3d.TransformationEstimationPointToPoint())
     	cloud.transform(tf1.transformation)
