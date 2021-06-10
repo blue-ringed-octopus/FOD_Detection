@@ -88,7 +88,7 @@
   <arg name="scan_cloud_max_points"   default="0"/>
   <arg name="scan_cloud_filtered"     default="false"/> <!-- use filtered cloud from icp_odometry for mapping -->
    
-  <arg name="visual_odometry"          default="true"/>          <!-- Launch rtabmap visual odometry node -->
+  <arg name="visual_odometry"          default="false"/>          <!-- Launch rtabmap visual odometry node -->
   <arg name="icp_odometry"             default="false"/>         <!-- Launch rtabmap icp odometry node -->
   <arg name="odom_topic"               default="odom"/>          <!-- Odometry topic name -->
   <arg name="vo_frame_id"              default="odom"/> <!-- Visual/Icp odometry frame ID for TF -->

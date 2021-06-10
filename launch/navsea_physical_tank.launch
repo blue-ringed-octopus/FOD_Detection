@@ -1,0 +1,25 @@
+<launch>
+ <arg name="pi/2" value="1.5707963267948966" />
+ <arg name="TURTLEBOT3_MODEL" value="waffle_pi_CUSTOM" />
+ <arg name="model" default="waffle_pi_CUSTOM" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="x_pos" default="0.0"/>
+  <arg name="y_pos" default="0.0"/>
+  <arg name="z_pos" default="0.2"/>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find navsea)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+ <node
+    name="robot_state_publisher"
+    pkg="robot_state_publisher"
+    type="robot_state_publisher" />
+
+  <node type="rviz" name="rvizscan" pkg="rviz" args="-d $(find navsea)/rviz/real_bot.rviz" />
+
+  
+  <node pkg="tf" type="static_transform_publisher" name="wheel_tf_left" args="-0.144 0.144 0.023 3.14 0 1.57 /base_link /wheel_left_back_link 5"/>
+  <node pkg="tf" type="static_transform_publisher" name="wheel_tf_right" args="-0.144 -0.144 0.023 3.14 0 1.57 /base_link /wheel_right_back_link 5"/>
+  <node pkg="tf" type="static_transform_publisher" name="footprint2base" args="0 0 0 0 0 0 /base_footprint /base_link 5"/>
+<!--
+  <node pkg="navsea" name="gridmap_cleaning" type="gridmap_cleaning.py" output="screen"/>
+-->
+
+</launch>
