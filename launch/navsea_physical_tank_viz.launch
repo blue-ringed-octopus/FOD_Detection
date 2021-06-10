@@ -1,6 +1,6 @@
 <launch>
-   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find navsea)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find navsea)/urdf/turtlebot3_waffle_pi_CUSTOM.urdf.xacro" />
 
-  <node type="rviz" name="rvizscan" pkg="rviz" args="-d $(find navsea)/rviz/real_bot.rviz" /
+  <node type="rviz" name="rvizscan" pkg="rviz" args="-d $(find navsea)/rviz/real_bot.rviz" />
 
 </launch>
