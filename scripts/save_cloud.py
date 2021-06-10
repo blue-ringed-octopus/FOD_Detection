@@ -154,7 +154,7 @@ def save_raw_cloud():
 		drawcloud([raw_cloud], size=5)	
 
 	if (loop_input("Save raw cloud?")):
-		save_mat(path=navsea+"/output/Trial_PC/", file_name="Raw_Cloud", cloud=raw_cloud)
+		save_mat(path="~/output/Trial_PC/", file_name="Raw_Cloud", cloud=raw_cloud)
 
 	return raw_cloud
 
