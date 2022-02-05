@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -6,8 +6,6 @@ Created on Mon Jan  18 23:13:00 2021
 
 @author: Benjamin
 """
-#requires pip install open3d-python==0.3.0.0
-
 import numpy as np
 import ros_numpy
 import rospy 
@@ -43,7 +41,7 @@ icp_thres=5
 def loop_input(prompt):
 	inp=""
 	while inp.lower()!='y' and inp.lower()!='n':
-		inp=raw_input(prompt+"(y/n): \n")
+		inp=input(prompt+"(y/n): \n")
 	save=inp.lower()=='y'
 	return save
 
@@ -87,13 +85,13 @@ def msg2pc(data):
 	points[:,0]=pc['x']
 	points[:,1]=pc['y']
 	points[:,2]=pc['z']
-	p=o3d.PointCloud()
-	p.points=o3d.Vector3dVector(points)
+	p=o3d.geometry.PointCloud()
+	p.points=o3d.utility.Vector3dVector(points)
 	return p
 def drawcloud(clouds, size):
-	vis=o3d.VisualizerWithEditing()
+	vis=o3d.visualization.VisualizerWithEditing()
 	vis.create_window()
-	ro=o3d.RenderOption()
+	ro=o3d.visualization.RenderOption()
 	ro=vis.get_render_option()
 	ro.point_size=size
 	ro.show_coordinate_frame=True
@@ -111,17 +109,17 @@ def crop_cloud(cloud,xlim,ylim,zlim):
 
 
 def cloud_from_points(points):
-	tempcloud=o3d.PointCloud()
-	tempcloud.points=o3d.Vector3dVector(np.asarray(points))
+	tempcloud=o3d.geometry.PointCloud()
+	tempcloud.points=o3d.utility.Vector3dVector(np.asarray(points))
 	return tempcloud
 
 def random_downsample(cloud, percentage):
 	og_size=len(np.asarray(cloud.points))
 	ds_size=int(np.floor(len(np.asarray(cloud.points))*percentage))
 	print("Downsampling from "+ str(og_size)+" to " +str(ds_size))
-	ds_points=random.sample(np.asarray(cloud.points),ds_size)
-	cloud_ds=o3d.PointCloud()
-	cloud_ds.points=o3d.Vector3dVector(ds_points)
+	ds_points=random.sample(list(cloud.points),ds_size)
+	cloud_ds=o3d.geometry.PointCloud()
+	cloud_ds.points=o3d.utility.Vector3dVector(ds_points)
 	return cloud_ds
 
 def get_file_name(path, file_name):
@@ -154,45 +152,46 @@ def save_raw_cloud():
 		drawcloud([raw_cloud], size=5)	
 
 	if (loop_input("Save raw cloud?")):
-		save_mat(path="/home/owner/output/Trial_PC/", file_name="Raw_Cloud", cloud=raw_cloud)
+		save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=raw_cloud)
 
 	return raw_cloud
 
 def icp_cloud(raw_cloud):
-	CAD_cloud=o3d.PointCloud()
-	CAD_cloud.points=o3d.Vector3dVector(CAD)
-	cloud_icp_ds=o3d.voxel_down_sample(raw_cloud,0.01)
-	cloud_icp_ds=random_downsample(cloud_icp_ds,percentage=0.2)
-	print("Aligning map with CAD model...")
+    CAD_cloud=o3d.geometry.PointCloud()
+    CAD_cloud.points=o3d.utility.Vector3dVector(CAD)
+    cloud_icp_ds=raw_cloud.voxel_down_sample(0.01)
+    cloud_icp_ds=random_downsample(cloud_icp_ds,percentage=0.2)
+    print("Aligning map with CAD model...")
 	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
-	tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
-	tf1=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,tf_init,o3d.TransformationEstimationPointToPoint())
+    tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
+    tf1=o3d.pipelines.registration.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,
+                                                    tf_init,o3d.pipelines.registration.TransformationEstimationPointToPoint())
 	
-	cloud_icp_ds.transform(tf1.transformation)
+    cloud_icp_ds.transform(tf1.transformation)
 
-	croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
-	cloud_icp_ds.points=o3d.Vector3dVector(croped_points)
+    croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
+    cloud_icp_ds.points=o3d.utility.Vector3dVector(croped_points)
 
-	tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],		 		 						[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
+    tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],		 		 						[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
 
-	tf=np.matmul(tf2.transformation,tf1.transformation)
-    	raw_cloud.transform(tf)
-	croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
-	cropped_cloud=o3d.PointCloud()
-	cropped_cloud.points=o3d.Vector3dVector(croped_points)
-	cloud=random_downsample(cropped_cloud,percentage=0.05)
-	cloud=o3d.voxel_down_sample(cropped_cloud,0.0075)
-	return cloud, CAD_cloud
+    tf=np.matmul(tf2.transformation,tf1.transformation)
+    raw_cloud.transform(tf)
+    croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
+    cropped_cloud=o3d.geometry.PointCloud()
+    cropped_cloud.points=o3d.utility.Vector3dVector(croped_points)
+    cloud=random_downsample(cropped_cloud,percentage=0.05)
+    cloud=o3d.geometry.voxel_down_sample(cropped_cloud,0.0075)
+    return cloud, CAD_cloud
 
 def save_cloud():
-	raw_cloud=save_raw_cloud()
-	aligned_cloud, CAD_cloud=icp_cloud(raw_cloud)
-	return aligned_cloud, CAD_cloud
+    raw_cloud=save_raw_cloud()
+    aligned_cloud, CAD_cloud=icp_cloud(raw_cloud)
+    return aligned_cloud, CAD_cloud
 
 if __name__ == "__main__":
 	try:
 		rospy.init_node('FOD_Detection',anonymous=False)
-		save_cloud()	
+		save_raw_cloud()	
 	except KeyboardInterrupt:
 		print("Terminating")
 
