@@ -18,10 +18,10 @@ import random
 import scipy as sp
 import os
 from scipy.io import loadmat
-from rtabmap_ros.srv import GetMap
-from rtabmap_ros.srv import PublishMap
-from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2
+from sensor_msgs import point_cloud2
+import struct 
+import ctypes
 
 rospack=rospkg.RosPack()
 navsea=rospack.get_path('navsea')
@@ -80,14 +80,21 @@ def get_map_client():
 		print("Service all failed: %s"%e)
 
 def msg2pc(data):
-	pc=ros_numpy.numpify(data)
-	points=np.zeros((pc.shape[0],3))
-	points[:,0]=pc['x']
-	points[:,1]=pc['y']
-	points[:,2]=pc['z']
-	p=o3d.geometry.PointCloud()
-	p.points=o3d.utility.Vector3dVector(points)
-	return p
+    pc=ros_numpy.numpify(data)
+    points=np.zeros((pc.shape[0],3))
+    points[:,0]=pc['x']
+    points[:,1]=pc['y']
+    points[:,2]=pc['z']
+    pc=ros_numpy.point_cloud2.split_rgb_field(pc)
+    rgb=np.zeros((pc.shape[0],3))
+    rgb[:,0]=pc['r']
+    rgb[:,1]=pc['g']
+    rgb[:,2]=pc['b']
+    print(rgb)
+    p=o3d.geometry.PointCloud()
+    p.points=o3d.utility.Vector3dVector(points)
+    p.colors=o3d.utility.Vector3dVector(np.asarray(rgb/255))
+    return p
 def drawcloud(clouds, size):
 	vis=o3d.visualization.VisualizerWithEditing()
 	vis.create_window()
