@@ -136,7 +136,7 @@ def get_file_name(path, file_name):
 	return (path+file_name+"_"+str(i)+".mat")
 
 def save_mat(path, file_name, cloud):
-	mdic={"cloud":np.asarray(cloud.points)}
+	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
 	filename_num=get_file_name(path, file_name)
 	sp.io.savemat(filename_num, mdic)
 	print("saved to: "+filename_num)
