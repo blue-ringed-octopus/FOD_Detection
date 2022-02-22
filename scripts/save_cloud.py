@@ -6,7 +6,6 @@ Created on Mon Jan  18 23:13:00 2021
 
 @author: Benjamin
 """
-import pickle
 import numpy as np
 import ros_numpy
 import rospy 
@@ -14,7 +13,6 @@ import rospkg
 import threading
 import time
 import open3d as o3d
-import copy
 import scipy as sp
 import os
 from sensor_msgs.msg import PointCloud2
@@ -118,7 +116,7 @@ class Pointcloud_fetcher:
         
     def process_raw_cloud(self):
         cloud_icp_ds=self.raw_cloud.voxel_down_sample(0.01)
-        cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
+        #cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
         print("Aligning map with reference model...")
     	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
         tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
