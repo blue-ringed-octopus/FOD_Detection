@@ -118,9 +118,7 @@ class Pointcloud_fetcher:
     	print("raw cloud size:"+str(len(np.asarray(self.raw_cloud.points))))
     	
     	if (loop_input("Plot raw cloud?")):
-            test=self.raw_cloud
-            print(test)
-            self.drawcloud(clouds=[test], size=5)	
+            pclib.drawcloud(clouds=[self.raw_cloud], size=5)	
     
     	if (loop_input("Save raw cloud?")):
     		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=self.raw_cloud)
