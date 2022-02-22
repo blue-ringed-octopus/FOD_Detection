@@ -83,7 +83,7 @@ class Pointcloud_fetcher:
         p.colors=o3d.utility.Vector3dVector(np.asarray(rgb/255))
         self.raw_cloud=p
         
-    def drawcloud(clouds, size):
+    def drawcloud(self, clouds, size):
     	vis=o3d.visualization.VisualizerWithEditing()
     	vis.create_window()
     	ro=o3d.visualization.RenderOption()
