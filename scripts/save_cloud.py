@@ -83,18 +83,6 @@ class Pointcloud_fetcher:
         p.colors=o3d.utility.Vector3dVector(np.asarray(rgb/255))
         self.raw_cloud=p
         
-    def drawcloud(self, clouds, size):
-    	vis=o3d.visualization.VisualizerWithEditing()
-    	vis.create_window()
-    	ro=o3d.visualization.RenderOption()
-    	ro=vis.get_render_option()
-    	ro.point_size=size
-    	ro.show_coordinate_frame=True
-    	for cloud in clouds:
-    		vis.add_geometry(cloud)
-    	vis.run()
-    	vis.destroy_window()
-        
     def crop_cloud(cloud,xlim,ylim,zlim):
     	croped_points=[]
     	pointlist=np.asarray(cloud.points)

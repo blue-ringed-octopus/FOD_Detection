@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Aug  7 17:19:22 2021
@@ -14,6 +15,17 @@ import copy
 from scipy.cluster import hierarchy
 import random
 
+def drawcloud(clouds, size):
+	vis=o3d.visualization.VisualizerWithEditing()
+	vis.create_window()
+	ro=o3d.visualization.RenderOption()
+	ro=vis.get_render_option()
+	ro.point_size=size
+	ro.show_coordinate_frame=True
+	for cloud in clouds:
+		vis.add_geometry(cloud)
+	vis.run()
+	vis.destroy_window()
 
 def random_downsample(cloud, percentage):
 	og_size=len(np.asarray(cloud.points))
