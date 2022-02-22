@@ -19,9 +19,6 @@ import scipy as sp
 import os
 from scipy.io import loadmat
 from sensor_msgs.msg import PointCloud2
-from sensor_msgs import point_cloud2
-import struct 
-import ctypes
 
 rospack=rospkg.RosPack()
 navsea=rospack.get_path('navsea')

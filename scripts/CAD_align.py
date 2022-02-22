@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -10,19 +10,13 @@ Created on Mon Jan  18 23:13:00 2021
 import FOD_Detection as fd
 import save_cloud
 import numpy as np
-import ros_numpy
 import rospy 
 import rospkg
 import threading
 import time
 import open3d as o3d
-import copy
-import colorsys as cs
-import random
 from scipy.io import loadmat
-from rtabmap_ros.srv import GetMap
 from rtabmap_ros.srv import PublishMap
-from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2
 
 rospack=rospkg.RosPack()

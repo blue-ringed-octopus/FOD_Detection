@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -6,10 +6,7 @@ Created on Fri Feb  05 23:13:00 2021
 
 @author: Benjamin
 """
-import numpy as np
-import ros_numpy
 import rospy 
-import rospkg
 import FOD_Detection as FD
 import CAD_align as ca
 import tank_loop_nav as tl

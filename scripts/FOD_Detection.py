@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -9,7 +9,6 @@ Created on Mon Jan  18 23:13:00 2021
 #requires pip install open3d-python==0.3.0.0
 
 import numpy as np
-import ros_numpy
 import rospy 
 import rospkg
 import open3d as o3d
@@ -18,10 +17,6 @@ import os
 import save_cloud
 import colorsys as cs
 from scipy.io import loadmat
-from rtabmap_ros.srv import GetMap
-from rtabmap_ros.srv import PublishMap
-from std_srvs.srv import Empty
-from sensor_msgs.msg import PointCloud2
 from scipy.interpolate import RegularGridInterpolator 
 from scipy.cluster import hierarchy
 
