@@ -92,7 +92,7 @@ class Pointcloud_fetcher:
     
     def save_mat(self, path, file_name, cloud):
     	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
-    	filename_num=self.get_file_name(path, file_name)
+    	filename_num=get_file_name(path, file_name)
     	sp.io.savemat(filename_num, mdic)
     	print("saved to: "+filename_num)
     
