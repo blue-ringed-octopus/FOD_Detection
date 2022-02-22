@@ -6,6 +6,7 @@ Created on Mon Jan  18 23:13:00 2021
 
 @author: Benjamin
 """
+import pickle
 import numpy as np
 import ros_numpy
 import rospy 
@@ -16,33 +17,26 @@ import open3d as o3d
 import copy
 import scipy as sp
 import os
-from scipy.io import loadmat
 from sensor_msgs.msg import PointCloud2
 import Local_Covariance_Trainer as pclib
 
+def loop_input(prompt):
+       inp=""
+       while inp.lower()!='y' and inp.lower()!='n':
+           inp=input(prompt+"(y/n): \n")
+           save=inp.lower()=='y'
+       return save
+    
 class Pointcloud_fetcher:
-    rospack=rospkg.RosPack()
-    navsea=rospack.get_path('navsea')
-    
-    #--------------Load variables-------------------------
-    x = loadmat(navsea+'/scripts/FOD_detection_var.mat')
-    cov_global=np.array(x['cov_global'])
-    CAD=np.array(x['CAD_points'])
-    
-    
-    #----------------------Global variables----------------
-    done=False
-    map_data=None
-    icp_thres=5
-    
-    #-----------------------Functions----------------------
-    def loop_input(prompt):
-        inp=""
-        while inp.lower()!='y' and inp.lower()!='n':
-            inp=input(prompt+"(y/n): \n")
-            save=inp.lower()=='y'
-        return save
-        
+    '''
+    Contructor
+    '''
+    def __init__(self,icp_thres, reference_cloud_uri):
+        self.reference_cloud=o3d.io.read_point_cloud(reference_cloud_uri)
+        self.done=False
+        self.map_data=None
+        self.icp_thres=icp_thres
+              
     def draw_registration_result(source, target, transformation):
         source_temp = copy.deepcopy(source)
         target_temp = copy.deepcopy(target)
@@ -51,18 +45,13 @@ class Pointcloud_fetcher:
         source_temp.transform(transformation)
         o3d.draw_geometries([source_temp, target_temp])
     
-    def get_map_thread():
-    	global map_data
-    	global done
-    	
+    def get_map_thread(self):  	
     	#map_data=rospy.wait_for_message('rtabmap/cloud_map',PointCloud2)
-    	map_data=rospy.wait_for_message('rtabmap/map_assembler/cloud_map',PointCloud2)
+    	self.map_data=rospy.wait_for_message('rtabmap/map_assembler/cloud_map',PointCloud2)
+    	self.done = True
     
-    	done = True
-    
-    
-    def get_map_client():
-    	thread = threading.Thread(target=get_map_thread)
+    def get_map_client(self):
+    	thread = threading.Thread(target=self.get_map_thread)
     	print("Getting map")
     	try:
     		thread.start()
@@ -71,14 +60,14 @@ class Pointcloud_fetcher:
     		#publish_map=rospy.ServiceProxy('rtabmap/map_assembler/publish_map',PublishMap)
     		#publish_map(1,1,0)
     		print("requested map")
-    		while not done:
+    		while not self.done:
     			time.sleep(0.5)
     		#return data
     	except rospy.ServiceException as e:
     		print("Service all failed: %s"%e)
     
-    def msg2pc(data):
-        pc=ros_numpy.numpify(data)
+    def msg2pc(self):
+        pc=ros_numpy.numpify(self.map_data)
         points=np.zeros((pc.shape[0],3))
         points[:,0]=pc['x']
         points[:,1]=pc['y']
@@ -92,7 +81,8 @@ class Pointcloud_fetcher:
         p=o3d.geometry.PointCloud()
         p.points=o3d.utility.Vector3dVector(points)
         p.colors=o3d.utility.Vector3dVector(np.asarray(rgb/255))
-        return p
+        self.raw_cloud=p
+        
     def drawcloud(clouds, size):
     	vis=o3d.visualization.VisualizerWithEditing()
     	vis.create_window()
@@ -104,6 +94,7 @@ class Pointcloud_fetcher:
     		vis.add_geometry(cloud)
     	vis.run()
     	vis.destroy_window()
+        
     def crop_cloud(cloud,xlim,ylim,zlim):
     	croped_points=[]
     	pointlist=np.asarray(cloud.points)
@@ -118,19 +109,19 @@ class Pointcloud_fetcher:
     		i=i+1
     	return (path+file_name+"_"+str(i)+".mat")
     
-    def save_mat(path, file_name, cloud):
+    def save_mat(self, path, file_name, cloud):
     	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
-    	filename_num=get_file_name(path, file_name)
+    	filename_num=self.get_file_name(path, file_name)
     	sp.io.savemat(filename_num, mdic)
     	print("saved to: "+filename_num)
     
-    def save_raw_cloud():
+    def save_raw_cloud(self):
     	# get map from rtabmap
     	raw_cloud=None
     	try:
     		while raw_cloud==None or len(raw_cloud.points)==0:
-    			get_map_client()
-    			raw_cloud=msg2pc(map_data)
+    			self.get_map_client()
+    			self.msg2pc()
     	except KeyboardInterrupt:
     		print("Terminating")
     	print("Got Map")
@@ -139,51 +130,49 @@ class Pointcloud_fetcher:
     	print("raw cloud size:"+str(len(np.asarray(raw_cloud.points))))
     	
     	if (loop_input("Plot raw cloud?")):
-    		drawcloud([raw_cloud], size=5)	
+    		self.drawcloud([raw_cloud], size=5)	
     
     	if (loop_input("Save raw cloud?")):
-    		save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=raw_cloud)
+    		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=raw_cloud)
     
     	return raw_cloud
     
-    def icp_cloud(raw_cloud, tf_init):
-        CAD_cloud=o3d.geometry.PointCloud()
-        CAD_cloud.points=o3d.utility.Vector3dVector(CAD)
-        cloud_icp_ds=raw_cloud.voxel_down_sample(0.01)
+    def process_raw_cloud(self):
+        cloud_icp_ds=self.raw_cloud.voxel_down_sample(0.01)
         cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
-        print("Aligning map with CAD model...")
+        print("Aligning map with reference model...")
     	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
         tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
-        tf1=o3d.pipelines.registration.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,
-                                                        tf_init,o3d.pipelines.registration.TransformationEstimationPointToPoint())
+        tf=o3d.pipelines.registration.registration_icp(cloud_icp_ds, self.reference_cloud,icp_thres,
+                                                        tf_init,
+                                                        o3d.pipelines.registration.TransformationEstimationPointToPoint())
     	
-        cloud_icp_ds.transform(tf1.transformation)
+       # cloud_icp_ds.transform(tf1.transformation)
     
-        croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
-        cloud_icp_ds.points=o3d.utility.Vector3dVector(croped_points)
+       # croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
+     #   cloud_icp_ds.points=o3d.utility.Vector3dVector(croped_points)
     
-        tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],		 		 						[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
+       # tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
     
-        tf=np.matmul(tf2.transformation,tf1.transformation)
-        raw_cloud.transform(tf)
-        croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
-        cropped_cloud=o3d.geometry.PointCloud()
-        cropped_cloud.points=o3d.utility.Vector3dVector(croped_points)
-        cloud=pclib.random_downsample(cropped_cloud,percentage=0.05)
-        cloud=o3d.geometry.voxel_down_sample(cropped_cloud,0.0075)
-        return tf, np.linalg.inv(tf)
+   #     tf=np.matmul(tf2.transformation,tf1.transformation)
+        self.raw_cloud.transform(tf)
+      #  croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
+        self.processed_cloud=self.raw_cloud
+        self.tf=tf
+        self.tf_inv=np.linalg.inv(tf)
+        # cloud=pclib.random_downsample(cropped_cloud,percentage=0.05)
+        # cloud=o3d.geometry.voxel_down_sample(cropped_cloud,0.0075)
     
-    def save_cloud():
-        raw_cloud=save_raw_cloud()
-        aligned_cloud, CAD_cloud=icp_cloud(raw_cloud)
-        return aligned_cloud, CAD_cloud
-
 if __name__ == "__main__":
-	try:
-		rospy.init_node('FOD_Detection',anonymous=False)
-		save_raw_cloud()	
-	except KeyboardInterrupt:
-		print("Terminating")
+    try:
+        rospy.init_node('FOD_Detection',anonymous=False)
+        rospack=rospkg.RosPack()
+        navsea=rospack.get_path('navsea')
+        reference_cloud_uri=navsea+"/resource/mean_cloud.pcd"
+        icp_thres=5
+        fetcher=Pointcloud_fetcher(icp_thres,reference_cloud_uri)
+    except KeyboardInterrupt:
+        print("Terminating")
 
 
 
