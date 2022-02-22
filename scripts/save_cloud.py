@@ -26,7 +26,13 @@ def loop_input(prompt):
            inp=input(prompt+"(y/n): \n")
            save=inp.lower()=='y'
        return save
-    
+   
+def get_file_name(path, file_name):
+	i=0
+	while os.path.exists(path+file_name+"_"+str(i)+".mat"):
+		i=i+1
+	return (path+file_name+"_"+str(i)+".mat")   
+
 class Pointcloud_fetcher:
     '''
     Contructor
@@ -37,13 +43,6 @@ class Pointcloud_fetcher:
         self.map_data=None
         self.icp_thres=icp_thres
               
-    def draw_registration_result(source, target, transformation):
-        source_temp = copy.deepcopy(source)
-        target_temp = copy.deepcopy(target)
-        source_temp.paint_uniform_color([1, 0.706, 0])
-        target_temp.paint_uniform_color([0, 0.651, 0.929])
-        source_temp.transform(transformation)
-        o3d.draw_geometries([source_temp, target_temp])
     
     def get_map_thread(self):  	
     	#map_data=rospy.wait_for_message('rtabmap/cloud_map',PointCloud2)
@@ -83,19 +82,13 @@ class Pointcloud_fetcher:
         p.colors=o3d.utility.Vector3dVector(np.asarray(rgb/255))
         self.raw_cloud=p
         
-    def crop_cloud(cloud,xlim,ylim,zlim):
-    	croped_points=[]
-    	pointlist=np.asarray(cloud.points)
-    	for point in pointlist:
-    		if (point[0]>xlim[0]) & (point[0]<xlim[1]) & (point[1]>ylim[0]) & (point[1]<ylim[1]) & (point[2]>zlim[0]) & (point[2]<zlim[1]):
-    			croped_points.append(point)		
-    	return croped_points
-    
-    def get_file_name(path, file_name):
-    	i=0
-    	while os.path.exists(path+file_name+"_"+str(i)+".mat"):
-    		i=i+1
-    	return (path+file_name+"_"+str(i)+".mat")
+    # def crop_cloud(cloud,xlim,ylim,zlim):
+    # 	croped_points=[]
+    # 	pointlist=np.asarray(cloud.points)
+    # 	for point in pointlist:
+    # 		if (point[0]>xlim[0]) & (point[0]<xlim[1]) & (point[1]>ylim[0]) & (point[1]<ylim[1]) & (point[2]>zlim[0]) & (point[2]<zlim[1]):
+    # 			croped_points.append(point)		
+    # 	return croped_points
     
     def save_mat(self, path, file_name, cloud):
     	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
