@@ -160,6 +160,8 @@ class Pointcloud_fetcher:
         self.processed_cloud=self.raw_cloud
         self.tf=tf
         self.tf_inv=np.linalg.inv(tf)
+        print(tf)
+        print("Done")
         # cloud=pclib.random_downsample(cropped_cloud,percentage=0.05)
         # cloud=o3d.geometry.voxel_down_sample(cropped_cloud,0.0075)
     
@@ -171,6 +173,8 @@ if __name__ == "__main__":
         reference_cloud_uri=navsea+"/resource/mean_cloud.pcd"
         icp_thres=5
         fetcher=Pointcloud_fetcher(icp_thres,reference_cloud_uri)
+        fetcher.save_raw_cloud()
+        fetcher.process_raw_cloud()
     except KeyboardInterrupt:
         print("Terminating")
 
