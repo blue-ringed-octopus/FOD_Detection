@@ -131,6 +131,7 @@ class Pointcloud_fetcher:
     	
     	if (loop_input("Plot raw cloud?")):
             test=self.raw_cloud
+            print(test)
             self.drawcloud(clouds=[test], size=5)	
     
     	if (loop_input("Save raw cloud?")):
