@@ -119,11 +119,12 @@ class Pointcloud_fetcher:
         #cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
         print("Aligning map with reference model...")
     	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
-        tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
+       # tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
+        tf_init=np.eye(4)
         tf=o3d.pipelines.registration.registration_icp(cloud_icp_ds, self.reference_cloud,icp_thres,
                                                         tf_init,
                                                         o3d.pipelines.registration.TransformationEstimationPointToPoint())
-    	
+
        # cloud_icp_ds.transform(tf1.transformation)
     
        # croped_points=crop_cloud(cloud_icp_ds,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
@@ -132,11 +133,11 @@ class Pointcloud_fetcher:
        # tf2=o3d.registration_icp(cloud_icp_ds, CAD_cloud,icp_thres,np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),o3d.TransformationEstimationPointToPoint())
     
    #     tf=np.matmul(tf2.transformation,tf1.transformation)
-        self.raw_cloud.transform(tf)
+        self.raw_cloud.transform(tf.transformation)
       #  croped_points=crop_cloud(raw_cloud,[-0.01, 6],[-3, 0.1],[-0.01, 1.5])
         self.processed_cloud=self.raw_cloud
         self.tf=tf
-        self.tf_inv=np.linalg.inv(tf)
+        self.tf_inv=np.linalg.inv(tf.transformation)
         print(tf)
         print("Done")
         # cloud=pclib.random_downsample(cropped_cloud,percentage=0.05)
