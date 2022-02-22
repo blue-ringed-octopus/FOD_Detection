@@ -117,9 +117,9 @@ class Pointcloud_fetcher:
     
     def save_raw_cloud(self):
     	# get map from rtabmap
-    	raw_cloud=None
+    	self.raw_cloud=None
     	try:
-    		while raw_cloud==None or len(raw_cloud.points)==0:
+    		while self.raw_cloud==None or len(self.raw_cloud.points)==0:
     			self.get_map_client()
     			self.msg2pc()
     	except KeyboardInterrupt:
@@ -127,16 +127,14 @@ class Pointcloud_fetcher:
     	print("Got Map")
     
     
-    	print("raw cloud size:"+str(len(np.asarray(raw_cloud.points))))
+    	print("raw cloud size:"+str(len(np.asarray(self.raw_cloud.points))))
     	
     	if (loop_input("Plot raw cloud?")):
-    		self.drawcloud([raw_cloud], size=5)	
+    		self.drawcloud([self.raw_cloud], size=5)	
     
     	if (loop_input("Save raw cloud?")):
-    		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=raw_cloud)
-    
-    	return raw_cloud
-    
+    		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=self.raw_cloud)
+        
     def process_raw_cloud(self):
         cloud_icp_ds=self.raw_cloud.voxel_down_sample(0.01)
         cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
