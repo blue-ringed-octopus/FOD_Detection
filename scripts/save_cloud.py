@@ -152,7 +152,7 @@ if __name__ == "__main__":
         icp_thres=5
         fetcher=Pointcloud_fetcher(icp_thres,reference_cloud_uri)
         fetcher.save_raw_cloud()
-        fetcher.process_raw_cloud()
+        #fetcher.process_raw_cloud()
     except KeyboardInterrupt:
         print("Terminating")
 
