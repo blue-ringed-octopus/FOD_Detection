@@ -112,7 +112,7 @@ class Pointcloud_fetcher:
             pclib.drawcloud(clouds=[self.raw_cloud], size=5)	
     
     	if (loop_input("Save raw cloud?")):
-    		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud", cloud=self.raw_cloud)
+    		self.save_mat(path=os.path.expanduser("~/output/"), file_name="Raw_Cloud_opt", cloud=self.raw_cloud)
         
     def process_raw_cloud(self):
         cloud_icp_ds=self.raw_cloud.voxel_down_sample(0.01)
