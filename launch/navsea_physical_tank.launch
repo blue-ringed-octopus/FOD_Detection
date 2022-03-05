@@ -20,7 +20,6 @@
   <node pkg="tf" type="static_transform_publisher" name="wheel_tf_right" args="-0.144 -0.144 0.023 3.14 0 1.57 /base_link /wheel_right_back_link 5"/> -->
   <node pkg="tf" type="static_transform_publisher" name="footprint2base" args="0 0 0 0 0 0 /base_footprint /base_link 5"/>
 
-  <node pkg="navsea" name="gridmap_cleaning" type="gridmap_cleaning.py" output="screen"/>
 
   <node pkg="navsea" name="cov_append" type="odom_covariance.py" output="screen"/>
 </launch>
