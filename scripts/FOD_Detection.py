@@ -83,7 +83,7 @@ class FOD_Detector:
            
             rospy.loginfo("Creating KD-tree")
             self.cloud_ds=pclib.random_downsample(cloud, params["downsample_rate"])
-            self.cloud_ds_trees.append(KDTree(np.asarray(self.cloud_ds.points)))
+            self.cloud_ds_trees=KDTree(np.asarray(self.cloud_ds.points))
             
    
     def calculate_discrep(self):
