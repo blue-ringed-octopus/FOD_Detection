@@ -94,8 +94,8 @@ class Pointcloud_fetcher:
     	sp.io.savemat(filename_num, mdic)
     	print("saved to: "+filename_num)
     
-    def save_raw_cloud(self):
-    	# get map from rtabmap
+    def get_raw_cloud(self):
+        # get map from rtabmap
     	self.raw_cloud=None
     	try:
     		while self.raw_cloud==None or len(self.raw_cloud.points)==0:
@@ -104,9 +104,10 @@ class Pointcloud_fetcher:
     	except KeyboardInterrupt:
     		print("Terminating")
     	print("Got Map")
-    
-    
     	print("raw cloud size:"+str(len(np.asarray(self.raw_cloud.points))))
+        
+    def save_raw_cloud(self):
+    	self.get_raw_cloud()
     	
     	if (loop_input("Plot raw cloud?")):
             pclib.drawcloud(clouds=[self.raw_cloud], size=5)	
@@ -116,7 +117,6 @@ class Pointcloud_fetcher:
         
     def process_raw_cloud(self):
         cloud_icp_ds=self.raw_cloud.voxel_down_sample(0.01)
-        #cloud_icp_ds=pclib.random_downsample(cloud_icp_ds,percentage=0.2)
         print("Aligning map with reference model...")
     	#tf_init=np.asarray([[-1,0,0,0],[0,-1,0,0],[0,0,1,],[0,0,0,1]])
        # tf_init=np.asarray([[1,0,0,0.5],[0,1,0,-1],[0,0,1,0],[0,0,0,1]])
