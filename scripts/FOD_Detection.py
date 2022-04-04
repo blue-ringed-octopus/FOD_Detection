@@ -64,7 +64,7 @@ class FOD_Detector:
             params=self.params["preprocess"]
             denosie_neightbor=params["denosie_neightbor"]
             denoise_std=params["denoise_std"]
-            cloud=self.raw_cloud.remove_statistical_outlier(nb_neighbors=denosie_neightbor,
+            cloud, idx=self.raw_cloud.remove_statistical_outlier(nb_neighbors=denosie_neightbor,
                                                                 std_ratio=denoise_std)
             
             rospy.loginfo("Registering Pointcloud to reference")
