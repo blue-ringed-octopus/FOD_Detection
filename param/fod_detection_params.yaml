@@ -1,5 +1,5 @@
 preprocess:
-    reference_cloud_uri: mm
+    reference_cloud_uri: /home/navsea-jetson/catkin_ws/src/navsea/resource/mean_cloud.pcd  
     icp_threshold: 0.5
     icp_tf_init: [[1,  0,  0,0],[0,  1,0,0],[0, 0, 1 ,0], [0,0,0,1]]
     denosie_neightbor: 50
@@ -7,7 +7,7 @@ preprocess:
     downsample_rate: 0.025
 
 fod_detection:
-    cloud_info_uri: mm    
+    cloud_info_uri: /home/navsea-jetson/catkin_ws/src/navsea/resource/mean_cloud_info.p    
     metric: mahalanobis
     downsample_rate: 0.1
 
