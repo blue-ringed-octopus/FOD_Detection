@@ -38,7 +38,6 @@ class FOD_Detector:
     def __init__(self):
         rospack=rospkg.RosPack()
         self.navsea=rospack.get_path('navsea')
-        self.icp_thres=rospy.get_param("icp_threshold")
         trained_param=pickle.load( open(self.navsea+"param/detection params.p", "rb" ) )
         with open(self.navsea+"param/fod_detection_params.yaml", 'r') as file:
             params= yaml.safe_load(file)
