@@ -158,14 +158,14 @@ class FOD_Detector:
             rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
             clouds[i].paint_uniform_color(rgb)
             
-        self.fods=clouds
+        self.fods_list=clouds
         self.fod_dist=dists
         
     def Cluster_centroid(self):
         '''
         documentation
         '''
-        clusters=self.fods
+        clusters=self.fods_list
         weights=self.fod_dist
         centroids=[]
         for i, cluster in enumerate(clusters):
@@ -184,73 +184,47 @@ class FOD_Detector:
             spheres[-1]=spheres[-1].transform(tf)
             spheres[-1].paint_uniform_color([1,0,0])
         o3d.visualization.draw_geometries([base_pc]+spheres)
+    
+    def Project_obsticles(self):
+        obsticle_cloud=o3d.voxel_down_sample(self.fods,0.05)
+        idx=pclib.crop_cloud_par(np.asarray(obsticle_cloud.points), [-np.inf, np.inf],[-np.inf, np.inf],[0.05,1])
+        obsticle_cloud=obsticle_cloud.select_by_index(idx)
+        obsticle_points=np.asarray(obsticle_cloud.points)
+        obsticle_points=np.delete(obsticle_points,2, axis=1)
+        print(obsticle_points)
+        return obsticle_points
         
-
-    
-         
-
-    
-    # def Get_file_name(path, file_name):
-    # 	i=0
-    # 	while os.path.exists(path+file_name+"_"+str(i)+".mat"):
-    # 		i=i+1
-    # 	return (path+file_name+"_"+str(i)+".mat")
-
-    # def Cloud_m_dist(cloud):
-    # 	mdist=M_dist_interp(np.asarray(cloud.points))
-    # 	cloud.paint_uniform_color([0.2,0.2,0.2])
-    # 	np.asarray(cloud.colors)[np.where(np.isnan(mdist))[0],:]=[0,1,1]
-    # 	np.asarray(cloud.colors)[np.where(np.isinf(mdist))[0],:]=[0,1,1]
-    # 	mdist[np.where(np.isnan(mdist))]=0
-    # 	mdist[np.where(np.isinf(mdist))]=np.max(mdist)
-    # 	np.asarray(cloud.colors)[np.where(mdist>2.5)[0],:]=[1,0,0] #2.5
-    # 	if (Loop_input("Plot FOD?")):
-    #   		Drawcloud([cloud], size=0.1)
-    # 	return mdist
-    
-    def Isolate_FOD(cloud, dist, cutoff):
-        FODS=cloud.select_by_index(np.where(dist>=cutoff)[0])
-        Tank=cloud.select_by_index(np.where(dist<cutoff)[0])
+    def FOD_Detection_routine(self):
+        print("FOD detection module started")
         
-        FOD_dist=dist[dist>=cutoff]
-        FODS.paint_uniform_color([1,0,0])
-        Tank.paint_uniform_color([0.2, 0.2 ,0.2])
-        return FODS, Tank, FOD_dist
-
-    
-def FOD_Detection_routine():
-    print("FOD detection module started")
-    fod_detector=FOD_Detector()
-    
-    #get fod cloud
-    fod_detector.fetch_cloud()
-    
-    #FOD cloud ICP
-    fod_detector.process_cloud()
-    
-   	 #Calculate dist
-    fod_detector.calculate_discrep()
-    # blur
-    fod_detector.blur_dist()
-    
-    #segmentation 
-    fod_detector.Segment_FOD()
-    
-    #cluster 
-    fod_detector.Fod_clustering()
-    fod_detector.Cluster_centroid()
-    
-    if (Loop_input("Plot FOD centroids?")):
-        fod_detector.plot_fod_centroid
-    
-    # 	centroid=Cluster_centroid(FOD_clusters) #find FOD centroids 
-    
-    # project obsticles 
-    obsticle_points=Project_obsticles()
-    	
-    return fod_detector
-
+        #get fod cloud
+        self.fetch_cloud()
+        
+        #FOD cloud ICP
+        self.process_cloud()
+        
+       	 #Calculate dist
+        self.calculate_discrep()
+        # blur
+        self.blur_dist()
+        
+        #segmentation 
+        self.Segment_FOD()
+        
+        #cluster 
+        self.Fod_clustering()
+        self.Cluster_centroid()
+        
+        if (Loop_input("Plot FOD centroids?")):
+            self.plot_fod_centroid
+        
+        # 	centroid=Cluster_centroid(FOD_clusters) #find FOD centroids 
+        
+        # project obsticles 
+        self.Project_obsticles()
+        	
 if __name__ == "__main__":
     rospy.init_node('FOD_Detection',anonymous=False)
-    FOD_Detection_routine()
+    fod_detector=FOD_Detector()
+    fod_detector.FOD_Detection_routine()
 
