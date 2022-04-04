@@ -8,16 +8,30 @@ Created on Sat Aug  7 17:19:22 2021
 import numpy as np 
 from numba import cuda
 from scipy.spatial import KDTree
-from scipy.io import loadmat
 import open3d as o3d
 import colorsys as cs
 import copy
 from scipy.cluster import hierarchy
 import random
 
-def drawcloud(clouds, size):
+def display_inlier_outlier(cloud, ind):
+    inlier_cloud = cloud.select_by_index(ind)
+    outlier_cloud = cloud.select_by_index(ind, invert=True)
+    outlier_cloud.paint_uniform_color([1, 0, 0])
+    inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+    o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+    
+def draw_registration_result(source, target, transformation):
+    source_temp = copy.deepcopy(source)
+    target_temp = copy.deepcopy(target)
+    source_temp.paint_uniform_color([1, 0.706, 0])
+    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    source_temp.transform(transformation)
+    o3d.draw_geometries([source_temp, target_temp])
+
+def drawcloud(clouds, size,window_name="Open3D"):
 	vis=o3d.visualization.VisualizerWithEditing()
-	vis.create_window()
+	vis.create_window(window_name=window_name)
 	ro=o3d.visualization.RenderOption()
 	ro=vis.get_render_option()
 	ro.point_size=size
@@ -28,30 +42,30 @@ def drawcloud(clouds, size):
 	vis.destroy_window()
 
 def random_downsample(cloud, percentage):
-	og_size=len(np.asarray(cloud.points))
-	ds_size=int(np.floor(len(np.asarray(cloud.points))*percentage))
-	print("Downsampling from "+ str(og_size)+" to " +str(ds_size))
-	ds_points=random.sample(np.asarray(cloud.points),ds_size)
-	cloud_ds=o3d.PointCloud()
-	cloud_ds.points=o3d.Vector3dVector(ds_points)
-	return cloud_ds
+    og_size=len(np.asarray(cloud.points))
+    ds_size=int(np.floor(len(np.asarray(cloud.points))*percentage))
+    print("Downsampling from "+ str(og_size)+" to " +str(ds_size))
+    idx=random.sample(range(len(cloud.points)),ds_size)
+    idx.sort()
+    cloud_ds=cloud.select_by_index(idx)
+    return cloud_ds, idx
 
-def Fod_clustering(points, minsize, cutoff):
- 	labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)
- 	num_point=np.bincount(labels)
- 	print(num_point)
- 	clouds=[]
- 	for i in range(max(labels)):
-         if num_point[i+1]>=minsize:
-             pointlist=[]
-             for j in range(len(points)):
-                 if i+1==labels[j]:
-                     pointlist.append(points[j])
-             clouds.append(Cloud_from_points(pointlist))
- 	for i in range(len(clouds)):
-         rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
-         clouds[i].paint_uniform_color(rgb)
- 	return clouds
+# def Fod_clustering(points, minsize, cutoff):
+#  	labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)
+#  	num_point=np.bincount(labels)
+#  	print(num_point)
+#  	clouds=[]
+#  	for i in range(max(labels)):
+#          if num_point[i+1]>=minsize:
+#              pointlist=[]
+#              for j in range(len(points)):
+#                  if i+1==labels[j]:
+#                      pointlist.append(points[j])
+#              clouds.append(Cloud_from_points(pointlist))
+#  	for i in range(len(clouds)):
+#          rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
+#          clouds[i].paint_uniform_color(rgb)
+#  	return clouds
 
 def Cloud_from_points(points, rgb=None):
     '''
@@ -75,6 +89,7 @@ def crop_cloud_kernel(d_out, d_cloud, d_lim):
         d_out[i]=in_bound
     
 def crop_cloud_par(cloud,lim):
+    #lim=[[x_min, x_max],[y_min, y_max],[z_min, z_max]]
     nx=cloud.shape[0]
     d_cloud=cuda.to_device(cloud)
     d_lim=cuda.to_device(lim)
@@ -83,7 +98,7 @@ def crop_cloud_par(cloud,lim):
     blocks=(nx+TPB-1)//TPB
     crop_cloud_kernel[blocks, thread](d_out, d_cloud, d_lim)
     in_bound=d_out.copy_to_host()
-    return cloud[in_bound]
+    return np.where(in_bound)[0]
     
 @cuda.jit()
 def mean_blur_kernel(d_out, d_cloud, d_neighbors,d_dists_mat):
@@ -173,16 +188,24 @@ def color_cloud(cloud, distance, min_dist, max_dist):
     new_cloud.colors=o3d.utility.Vector3dVector(np.asarray(color))
     return new_cloud    
 
-def calculate_m_dist(target,target_tree, cloud, cov_inv):
-    _,closest_index_kd_cad=target_tree.query(cloud, k=1)
+def calculate_discrep(cloud, target_tree ,target=[], cov_inv=[]):
+    d ,closest_index_kd_cad=target_tree.query(cloud, k=1)
+    if len(cov_inv)==0 or len(target)==0:
+        print("using Euclidean dist")
+        return d
+    else:
+        print("using Mahalanobis dist")
+        md=np.zeros(cloud.shape[0])
+        for i, pt in enumerate(cloud):
+            error=np.asarray([pt-target[closest_index_kd_cad[i]]])
+            md[i]=np.sqrt(error@cov_inv[closest_index_kd_cad[i]]@error.T)
+            if np.isnan(md[i]):
+                md[i]=np.inf
+        return md
 
-    md=np.zeros(cloud.shape[0])
-    for i, pt in enumerate(cloud):
-        error=np.asarray([pt-target[closest_index_kd_cad[i]]])
-        md[i]=np.sqrt(error@cov_inv[closest_index_kd_cad[i]]@error.T)
-        if np.isnan(md[i]):
-            md[i]=np.inf
-    return md
+def calculate_dist(target_tree, cloud):
+    d,_=target_tree.query(cloud, k=1)
+    return d
 
 def gaussian_blur(points, cloud, mdist):
 	region_mdist=[]
@@ -202,10 +225,10 @@ def gaussian_blur(points, cloud, mdist):
 		region_mdist.append(wMDist/sumW)
 	return np.asarray(region_mdist)
     
-def multi_blur(cloud,sample_points, distance, cloud_tree, num_iter, method='mean'):
+def multi_blur(cloud,sample_points, distance, cloud_tree, num_iter,k=150, method='mean'):
     if method=='mean':
         for i in range(num_iter):
-            blur_dist=mean_blur_par(np.asarray(cloud.points), distance, cloud_tree, 150)
+            blur_dist=mean_blur_par(np.asarray(cloud.points), distance, cloud_tree, k)
             distance=blur_dist
     else:
         for i in range(num_iter):
@@ -213,23 +236,25 @@ def multi_blur(cloud,sample_points, distance, cloud_tree, num_iter, method='mean
     return blur_dist
 
 class Local_Covariance_Trainer:
-    cad=None
+   
+    @staticmethod
+    def count_points_par(num_points, num_sample):
+        return
+    
     
     @staticmethod
-    def remove_low_sample_points(samples,target, percentile, min_sample_num=2):
+    def remove_low_sample_points(samples,target, percentile, min_sample_num=2, k=1):
         target_tree=KDTree(target)
-        _,closest_index_kd=target_tree.query(samples, k=1)
-    
+        _,closest_index_kd=target_tree.query(samples, k=k)
+        closest_index_kd=closest_index_kd.flatten()
         num_target_pt=target.shape[0]
+        #num_sample=np.asarray([np.count_nonzero(closest_index_kd == i) for i in range(num_target_pt)])
         num_sample=np.zeros(num_target_pt) 
-    
-        samples_pts= [ [] for _ in range(num_target_pt)]
         for i, index in enumerate(closest_index_kd):
-            samples_pts[index]+=[i]
             num_sample[index]+=1
         
         if percentile:
-            min_sample_num=np.percentile(num_sample, 5) 
+            min_sample_num=np.percentile(num_sample, percentile) 
             
         return np.where(num_sample>=min_sample_num)[0]
     
@@ -240,7 +265,7 @@ class Local_Covariance_Trainer:
     
         num_target_pt=target.shape[0]
         num_sample=np.zeros(num_target_pt) 
-    
+        mean=np.zeros(target.shape)
         samples_pts= [ [] for _ in range(num_target_pt)]
         for i, index in enumerate(closest_index_kd):
             samples_pts[index]+=[i]
@@ -248,11 +273,13 @@ class Local_Covariance_Trainer:
             
         covariance=np.zeros((num_target_pt,3,3))    
         for i, point in enumerate(samples_pts):
+            if point:
+                mean[i,:]=np.average(samples[point], axis=0)
             for sample in point:
-                error=np.asarray([target[i]-samples[sample]])
+                error=np.asarray([mean[i]-samples[sample]])
                 covariance[i]+=error.T@error
                 
-        return covariance,num_sample
+        return mean, covariance,num_sample
     
     @staticmethod
     def covariance_smoothing(target,covariance, num_sample,voxel_ds, method, neighborhood, k=250,sigma=0.075):
@@ -305,8 +332,8 @@ class Local_Covariance_Trainer:
         return covariance
     
     @staticmethod
-    def learn_local_covariance(sample_clouds, target_cloud, voxel_ds=0, method='mean',neighborhood='nn'):
-        covariance, num_sample=Local_Covariance_Trainer.local_covariance(sample_clouds,target_cloud)
-        cov_smooth=Local_Covariance_Trainer.covariance_smoothing(target_cloud,covariance,num_sample,voxel_ds, method, neighborhood)
+    def learn_local_covariance(sample_clouds, target_cloud, k_smoothing=250, voxel_ds=0, method='mean',neighborhood='nn'):
+        mean,covariance, num_sample=Local_Covariance_Trainer.local_covariance(sample_clouds,target_cloud)
+        cov_smooth=Local_Covariance_Trainer.covariance_smoothing(target_cloud,covariance,num_sample,voxel_ds, method, neighborhood, k=k_smoothing)
         cov_inv=np.asarray([np.linalg.inv(cov) if np.linalg.det(cov)!=0 else np.matrix(np.ones((3,3)) * np.inf) for cov in cov_smooth])
-        return cov_inv, num_sample, cov_smooth
+        return mean, cov_inv, num_sample, cov_smooth
