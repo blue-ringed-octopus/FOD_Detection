@@ -95,8 +95,8 @@ class FOD_Detector:
         else:
             dist=pclib.calculate_discrep(target=np.asarray(reference_cloud.points), 
                                          target_tree=self.reference_cloud_info["kd-tree"],
-                                         cloud=np.asarray((self.cloud_ds).points, 
-                                         cov_inv=self.reference_cloud_info["inverse covariance"]))
+                                         cloud=np.asarray((self.cloud_ds).points), 
+                                         cov_inv=self.reference_cloud_info["inverse covariance"])
         self.dist=dist    
         
     
