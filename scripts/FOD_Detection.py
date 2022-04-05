@@ -185,7 +185,7 @@ class FOD_Detector:
         o3d.visualization.draw_geometries([base_pc]+spheres)
     
     def Project_obsticles(self):
-        obsticle_cloud=o3d.voxel_down_sample(self.fods,0.05)
+        obsticle_cloud=self.fods.voxel_down_sample(0.05)
         idx=pclib.crop_cloud_par(np.asarray(obsticle_cloud.points), [-np.inf, np.inf],[-np.inf, np.inf],[0.05,1])
         obsticle_cloud=obsticle_cloud.select_by_index(idx)
         obsticle_points=np.asarray(obsticle_cloud.points)
@@ -215,7 +215,7 @@ class FOD_Detector:
         self.Cluster_centroid()
         
         if (Loop_input("Plot FOD centroids?")):
-            self.plot_fod_centroid
+            self.plot_fod_centroid()
         
         # 	centroid=Cluster_centroid(FOD_clusters) #find FOD centroids 
         
