@@ -188,7 +188,8 @@ class FOD_Detector:
     
     def Project_obsticles(self):
         obsticle_cloud=self.fods.voxel_down_sample(0.05)
-        idx=pclib.crop_cloud_par(np.asarray(obsticle_cloud.points), [-np.inf, np.inf],[-np.inf, np.inf],[0.05,1])
+        idx=pclib.crop_cloud_par(np.asarray(obsticle_cloud.points), 
+                                 [[-np.inf, np.inf],[-np.inf, np.inf],[0.05,1]])
         obsticle_cloud=obsticle_cloud.select_by_index(idx)
         obsticle_points=np.asarray(obsticle_cloud.points)
         obsticle_points=np.delete(obsticle_points,2, axis=1)
