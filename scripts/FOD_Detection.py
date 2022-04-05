@@ -174,7 +174,9 @@ class FOD_Detector:
         self.fod_centroids=np.asarray(centroids)
     
     
-    def plot_fod_centroid(base_pc, centroids):
+    def plot_fod_centroid(self):
+        centroids=self.fod_centroids
+        base_pc=self.cloud
         spheres=[]
         for points in centroids:
             spheres.append(o3d.geometry.TriangleMesh.create_sphere(radius=0.05))
