@@ -12,13 +12,9 @@ import numpy as np
 import rospy 
 import rospkg
 import open3d as o3d
-import copy
-import os
 import save_cloud
 import colorsys as cs
 import Local_Covariance_Trainer as pclib
-from scipy.io import loadmat
-from scipy.interpolate import RegularGridInterpolator 
 from scipy.cluster import hierarchy
 from scipy.spatial import KDTree
 
@@ -193,7 +189,6 @@ class FOD_Detector:
         obsticle_cloud=obsticle_cloud.select_by_index(idx)
         obsticle_points=np.asarray(obsticle_cloud.points)
         obsticle_points=np.delete(obsticle_points,2, axis=1)
-        print(obsticle_points)
         return obsticle_points
         
     def FOD_Detection_routine(self):
@@ -224,6 +219,8 @@ class FOD_Detector:
         
         # project obsticles 
         self.Project_obsticles()
+        
+        rospy.loginfo("fod detection finished! ")
         	
 if __name__ == "__main__":
     rospy.init_node('FOD_Detection',anonymous=False)
