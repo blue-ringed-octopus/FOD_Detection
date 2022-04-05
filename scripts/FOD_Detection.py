@@ -22,7 +22,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.cluster import hierarchy
 from scipy.spatial import KDTree
 
-def Loop_input(self, prompt):
+def Loop_input(prompt):
     	inp=""
     	while inp.lower()!='y' and inp.lower()!='n':
     		inp=input(prompt+"(y/n): \n")
