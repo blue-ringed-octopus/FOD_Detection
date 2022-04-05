@@ -134,10 +134,10 @@ class FOD_Detector:
         minsize=params['minimum_fod_point_count']
         dist=self.fod_dist
         if self.metric=="l2":
-            cutoff=self.params['fod_detection']["m-dist cluster cutoff"]
+            cutoff=self.params['fod_detection']["L2-dist cluster cutoff"]
         else:
-            cutoff=self.params['fod_detection']["l2-dist cluster cutoff"]
-            
+            cutoff=self.params['fod_detection']["m-dist cluster cutoff"]
+
         points=np.asarray(cloud.points)
         if len(points)<=minsize:
             print("no fod")
