@@ -7,8 +7,8 @@ Created on Fri Feb  05 23:13:00 2021
 @author: Benjamin
 """
 import rospy 
-import FOD_Detection as FD
-import save_cloud as sc
+from FOD_Detection import FOD_Detector
+import numpy as np
 import tank_loop_nav as tl
 import waypoint_generation as wg
 import greedy_scheduler as gs
@@ -48,16 +48,18 @@ if __name__ == "__main__":
 
 		#FOD Processing phase 
         print("Autonomous inspection complete, Entering processing module" )
-        objectPoints, obsticle_points=FD.FOD_Detection_routine(convolution=True)
+        fod_detector=FOD_Detector()
+        fod_detector.FOD_Detection_routine()
 
-        tf, tf_inv=sc.CAD2Cloudtf()
+        tf=fod_detector.tf        
+        tf_inv=np.linalg.inv(tf)
+        obsticle_points=fod_detector.Project_obsticles()
+        objectPoints=fod_detector.fod_centroids
         print(tf)
-        print(tf_inv)
         #Picture generation 
-        print("Number of FOD candidate found: "+str(len(objectPoints)))
+        print("Number of FOD candidate found: "+str(len(fod_detector.objectPoints)))
 
         waypoints=[]
-        objectPoints
         print("Calculating waypoint location...")
         for point in objectPoints:
             waypoints.append(wg.generate_waypoint(point,obsticle_points,tf_inv, tf))

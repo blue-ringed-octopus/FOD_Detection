@@ -44,6 +44,10 @@ class FOD_Detector:
 
     #-----------------------Functions----------------------
     def fetch_cloud(self):
+        '''
+        read reference pointcloud and it's info from given uri
+        request and get point cloud from rtabmap through ros services 
+        '''
         reference_cloud_uri=self.params["preprocess"]["reference_cloud_uri"]
         self.ref_cloud=o3d.io.read_point_cloud(reference_cloud_uri)
         cloud_info_uri=self.params["fod_detection"]["cloud_info_uri"]
@@ -56,33 +60,40 @@ class FOD_Detector:
         self.raw_cloud=self.fetcher.raw_cloud
         
     def process_cloud(self):
-            rospy.loginfo("Denoising PointCloud")
-            params=self.params["preprocess"]
-            denosie_neightbor=params["denosie_neightbor"]
-            denoise_std=params["denoise_std"]
-            cloud, idx=self.raw_cloud.remove_statistical_outlier(nb_neighbors=denosie_neightbor,
-                                                                std_ratio=denoise_std)
-            
-            rospy.loginfo("Registering Pointcloud to reference")
-            icp_thres=params["icp_threshold"]
-            icp_tf_init=np.asarray(params["icp_tf_init"])
-            bound=self.reference_cloud_info['bound']
-            cloud_sparse=cloud.voxel_down_sample(0.05)
-            tf=(o3d.pipelines.registration.registration_icp(
-                cloud_sparse, self.ref_cloud, icp_thres, icp_tf_init,
-                o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-                o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000)))      
-            
-            cloud=cloud.transform(tf.transformation)
-            in_bound=pclib.crop_cloud_par(np.asarray(cloud.points), bound)
-            self.cloud=cloud.select_by_index(in_bound)
-           
-            rospy.loginfo("Creating KD-tree")
-            self.cloud_ds,_=pclib.random_downsample(cloud, params["downsample_rate"])
-            self.cloud_ds_tree=KDTree(np.asarray(self.cloud_ds.points))
+        '''
+        Denoise pointcloud, then icp with reference pointcloud, and random downsample
+        '''
+        rospy.loginfo("Denoising PointCloud")
+        params=self.params["preprocess"]
+        denosie_neightbor=params["denosie_neightbor"]
+        denoise_std=params["denoise_std"]
+        cloud, idx=self.raw_cloud.remove_statistical_outlier(nb_neighbors=denosie_neightbor,
+                                                            std_ratio=denoise_std)
+        
+        rospy.loginfo("Registering Pointcloud to reference")
+        icp_thres=params["icp_threshold"]
+        icp_tf_init=np.asarray(params["icp_tf_init"])
+        bound=self.reference_cloud_info['bound']
+        cloud_sparse=cloud.voxel_down_sample(0.05)
+        tf=(o3d.pipelines.registration.registration_icp(
+            cloud_sparse, self.ref_cloud, icp_thres, icp_tf_init,
+            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+            o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000)))      
+        
+        cloud=cloud.transform(tf.transformation)
+        in_bound=pclib.crop_cloud_par(np.asarray(cloud.points), bound)
+        self.tf=tf
+        self.cloud=cloud.select_by_index(in_bound)
+       
+        rospy.loginfo("Creating KD-tree")
+        self.cloud_ds,_=pclib.random_downsample(cloud, params["downsample_rate"])
+        self.cloud_ds_tree=KDTree(np.asarray(self.cloud_ds.points))
             
    
     def calculate_discrep(self):
+        '''
+        calculate discrepency from map to reference pointcloud
+        '''
         reference_cloud=self.ref_cloud
         metric=self.params["fod_detection"]["metric"]
         if metric=="l2":
@@ -97,6 +108,9 @@ class FOD_Detector:
         
     
     def blur_dist(self):
+        '''
+        smoothing discrepiency using neighborhood
+        '''
         params=self.params["smoothing"]
         self.blur_dist=pclib.multi_blur(self.cloud_ds,self.cloud_ds, 
                                           self.dist,cloud_tree=self.cloud_ds_tree
@@ -104,6 +118,9 @@ class FOD_Detector:
                                           num_iter=int(params['iteration']))
     
     def Segment_FOD(self):
+        '''
+        seperate points with high discrepency from the map 
+        '''
         params=self.params['fod_detection']
         cloud_ds_ds, idx=pclib.random_downsample(self.cloud_ds, params["downsample_rate"])
         dist=self.blur_dist[idx]
@@ -125,6 +142,9 @@ class FOD_Detector:
         self.tank=tank
     
     def Fod_clustering(self):
+        '''
+        cluster high discrepency points into fod candidates
+        '''
         params=self.params['clustering']
         cloud=self.fods
         minsize=params['minimum_fod_point_count']
@@ -158,7 +178,7 @@ class FOD_Detector:
         
     def Cluster_centroid(self):
         '''
-        documentation
+        calculate centroids of clusters, weighted by the dicrepency 
         '''
         clusters=self.fods_list
         weights=self.fod_dist
@@ -183,6 +203,9 @@ class FOD_Detector:
         o3d.visualization.draw_geometries([base_pc]+spheres)
     
     def Project_obsticles(self):
+        '''
+        project potential obsticles from the map to the ground plane for waypoint generation
+        '''
         obsticle_cloud=self.fods.voxel_down_sample(0.05)
         idx=pclib.crop_cloud_par(np.asarray(obsticle_cloud.points), 
                                  [[-np.inf, np.inf],[-np.inf, np.inf],[0.05,1]])
@@ -214,8 +237,6 @@ class FOD_Detector:
         
         if (Loop_input("Plot FOD centroids?")):
             self.plot_fod_centroid()
-        
-        # 	centroid=Cluster_centroid(FOD_clusters) #find FOD centroids 
         
         # project obsticles 
         self.Project_obsticles()
