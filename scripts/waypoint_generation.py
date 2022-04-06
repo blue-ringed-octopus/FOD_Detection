@@ -16,21 +16,31 @@ import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 from nav_msgs.msg import OccupancyGrid
 from sklearn.neighbors import NearestNeighbors
+import yaml
 
-rospack=rospkg.RosPack()
-navsea=rospack.get_path('navsea')
-resolution=0.05
+class Waypoint_Generator: 
+    '''
+    Contructor
+    '''
+    def __init__(self,map_msg, tf):
+        rospack=rospkg.RosPack()
+        self.navsea=rospack.get_path('navsea')
+        with open(self.navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
+            params= yaml.safe_load(file)
+        self.tf=tf
+        self.tf_inv=np.linalg.inv(tf)
+        self.robot_radius=params["robot_radius"]
+        self.resolution=params["resolution"]
+        self.min_distance_base=params["min_distance"]
+        self.max_distance_base=params["max_distance"]
 
-robot_radius = 0.25 # meters from object
-min_distance = 0.75 # meters from object
-max_distance = 1.5 # meters from object
-cost_threshold = 70 # waypoint will not go to cost >= this
-ray_sim_step = 0.01 # raytrace ray step
+        self.cost_threshold=params["cost_threshold"]
+        self.ray_sim_step=params["ray_sim_step"]
+        self.parse_map_msg(map_msg)
+        self.generate_tree()
 
-##==================== Map msgs ====================#:
-class waypoint_generator:    
-    def msg_to_array(map_msg, object_waypoint, resolution=resolution):
     
+    def parse_map_msg(self,map_msg):
         w = map_msg.info.width
         map_array = []
         row_buffer = []
@@ -45,12 +55,11 @@ class waypoint_generator:
                 map_array += [row_buffer]
                 row_buffer = []
         map_array = np.array(map_array).transpose()  
-        object_indicies = np.array([abs(round((map_msg.info.origin.position.x-object_waypoint[0])/resolution)),
-                                    abs(round((map_msg.info.origin.position.y-object_waypoint[1])/resolution))])
-            
-     
-        return map_array, object_indicies.astype(np.int)
-    def project_tf(tf, points):
+        
+        self.origin=map_msg.info.origin.position
+        self.costmap=map_array
+    
+    def project_tf(self, tf, points):
         #print(np.asarray(points).shape[1])
         if np.asarray(points).shape[1]==2:
         	newPoints=[np.append(point, [0,1]) for point in points]
@@ -61,24 +70,24 @@ class waypoint_generator:
         newPoints=np.matmul(tf,np.transpose(newPoints))
         return np.transpose(newPoints)
     
-    def index2point(map_msg, waypoint_indicies, resolution): 
-        points = [ np.append(index[0]*resolution + map_msg.info.origin.position.x, 
-    		index[1]*resolution + map_msg.info.origin.position.y) for index in waypoint_indicies]
+    def index2point(self, waypoint_indicies): 
+        points = [ np.append(index[0]*self.resolution + self.origin.position.x, 
+    		index[1]*self.resolution + self.origin.position.y) for index in waypoint_indicies]
         return np.asarray(points)
     
-    def point2index(map_msg, points, resolution):
-        indices=[np.array([abs(round((map_msg.info.origin.position.x-point[0])/resolution)),
-                                    abs(round((map_msg.info.origin.position.y-point[1])/resolution))]) for point in points]
+    def point2index(self, points):
+        indices=[np.array([abs(round((self.origin.position.x-point[0])/self.resolution)),
+                                    abs(round((self.origin.position.y-point[1])/self.resolution))]) for point in points]
         return np.asarray(indices).astype(np.int)
     
-    def waypoint_indicies_to_msg(map_msg, object_point, waypoint_indicies, tf, resolution):
-        point=index2point(map_msg, waypoint_indicies, resolution)
-        tf_init=np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
-        p=project_tf(tf, point)[0]
+    def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
+        point=self.index2point(waypoint_indicies)
+        #tf_init=np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+        p=self.project_tf(self.tf, point)[0]
         x=p[0]
         y=p[1]
     
-        p_obj=project_tf(tf, [object_point])[0]
+        p_obj=self.project_tf(self.tf, [object_point])[0]
         x_obj=p_obj[0]
         y_obj=p_obj[1]
     
@@ -89,27 +98,30 @@ class waypoint_generator:
     
     ##==================== Waypoint msgs ====================#:
     
-    def generate_tree(costmap):
+    def generate_tree(self):
+        costmap=self.costmap
         costmap_points = []
         for i in range(costmap.shape[0]):
             for j in range(costmap.shape[1]):
                 costmap_points += [[i,j]]
         costmap_points = np.array(costmap_points)
-        costmap_tree = cKDTree(costmap_points)
-        return costmap_tree
+        self.costmap_tree = cKDTree(costmap_points)
     
-    def generate_candidates(costmap, costmap_tree, point, resolution, min_dist, max_dist):
-        min_dist = int(abs(round(min_dist/resolution)))
-        max_dist = int(abs(round(max_dist/resolution)))
-        neighborhood = (costmap_tree.data[costmap_tree.query_ball_point(point, max_dist)]).astype(np.int)
+    def generate_candidates(self, point):
+        min_dist = int(abs(round(self.min_distance/self.resolution)))
+        max_dist = int(abs(round(self.max_distance/self.resolution)))
+        neighborhood = (self.costmap_tree.data[self.costmap_tree.query_ball_point(point, max_dist)]).astype(np.int)
         candidates = []
         for neighbor in neighborhood:
             if sqrt((neighbor[0]-point[0])**2 + (neighbor[1]-point[1])**2) > min_dist:
                 candidates += [[neighbor[0], neighbor[1]]]
         return np.array(candidates)
     
-    def filter_collision(costmap, costmap_tree, candidates, radius=robot_radius, cost_threshold=cost_threshold):
-        radius = int(abs(round(radius/resolution)))
+    def filter_collision(self, candidates):
+        costmap=self.costmap
+        costmap_tree=self.costmap_tree
+        cost_threshold=self.cost_threshold
+        radius = int(abs(round(self.robot_radius/self.resolution)))
         new_candidates = []
         for candidate in candidates: 
             save_candidate = 1
@@ -122,14 +134,16 @@ class waypoint_generator:
                 new_candidates += [[candidate[0], candidate[1]]]
         return np.array(new_candidates)
     
-    def filter_obsticles(candidates, obsticle_tree):
-        distances, indices =obsticle_tree.kneighbors(candidates)
+    def filter_obstacles (self, candidates, obstacle_tree):
+        distances, indices =obstacle_tree.kneighbors(candidates)
         #print(candidates)
-        idx=np.where(distances>(robot_radius/resolution))
+        idx=np.where(distances>(self.robot_radius/self.resolution))
         candidates=candidates[idx[0]]
         return candidates
     
-    def filter_raytrace(costmap, candidates, point, step=ray_sim_step, costmap_resolution=resolution):
+    def filter_raytrace(self, candidates, point):
+        costmap=self.costmap
+        step=self.ray_sim_step
         new_candidates = []
         ray_costs = []
         for candidate in candidates:
@@ -156,56 +170,57 @@ class waypoint_generator:
                 ray_costs += [ray_cost]
         return np.array(new_candidates), np.array(ray_costs)
         
-    def minimize_ray_cost(candidates, ray_costs):
+    def minimize_ray_cost(self, candidates, ray_costs):
         min_cost_index = ray_costs.argmin()
         return candidates[min_cost_index]
     
-    def generate(obsticle_points, cad_costmap_msg, object_point,tf_cad2cloud, tf_cloud2cad,max_dist, min_dist, robot_radius=robot_radius,plot=False):
+    def generate(self, obstacle_points, object_point, plot=False):
         flag =  True # flag if failed to find waypoints
-    
-        cad_costmap, object_indicies = msg_to_array(cad_costmap_msg, object_point)
-        obsticle_indicies=point2index(cad_costmap_msg, obsticle_points, resolution)
-        costmap_tree = generate_tree(cad_costmap)
-        obsticle_tree = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(obsticle_indicies)
-        
+        cad_costmap=self.costmap
+        object_index=self.point2index(object_point)
+        costmap_tree=self.costmap_tree
+        if not len(obstacle_points)==0:
+            obstacle_indicies=self.point2index(obstacle_points)
+            obstacle_tree = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(obstacle_indicies)
+            
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.show()
     
-        candidates = generate_candidates(cad_costmap, costmap_tree,object_indicies, resolution,max_dist=max_dist, min_dist=min_dist)
+        candidates = self.generate_candidates(object_index)
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
         
-        candidates = filter_collision(cad_costmap, costmap_tree, candidates)
+        candidates = self.filter_collision(cad_costmap, costmap_tree, candidates)
     	
-        max_temp=max_dist
         while candidates.size == 0:
           print("No valid candidate, retrying with increased tolerance")
-          max_temp=max_temp*1.1
-          candidates = generate_candidates(cad_costmap, costmap_tree,object_indicies, resolution, max_dist=max_temp)
+          self.max_distance_og=self.max_distance
+          self.max_distance=self.max_distance*1.1
+          candidates = self.generate_candidates(object_index)
     
           if plot:
              plt.imshow(cad_costmap)
-             plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
+             plt.plot(object_index[1],object_index[0],'o', color='black')
              plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
              plt.show()
         
-             candidates = filter_collision(cad_costmap, costmap_tree, candidates)
+             candidates = self.filter_collision(cad_costmap, costmap_tree, candidates)
     
      
     
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
-            plt.plot(obsticle_indicies[:,1],obsticle_indicies[:,0],'o', color='red')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
+            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()    
-    
-        candidates = filter_obsticles(candidates, obsticle_tree)
+        if not len(obstacle_points)==0:
+            candidates = self.filter_obstacles (candidates, obstacle_tree)
      
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
@@ -219,12 +234,12 @@ class waypoint_generator:
         #print(candidates)
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
-            plt.plot(obsticle_indicies[:,1],obsticle_indicies[:,0],'o', color='red')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
+            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
     
-        candidates, ray_costs = filter_raytrace(cad_costmap, candidates, object_indicies)  
+        candidates, ray_costs = self.filter_raytrace(cad_costmap, candidates, object_index)  
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
             return nan, flag
@@ -239,39 +254,37 @@ class waypoint_generator:
     	
         if False:
             plt.imshow(cad_costmap)
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
-            plt.plot(obsticle_indicies[:,1],obsticle_indicies[:,0],'o', color='red')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
+            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
         
-        waypoint = minimize_ray_cost(candidates, ray_costs)
+        waypoint = self.minimize_ray_cost(candidates, ray_costs)
     
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(obsticle_indicies[:,1],obsticle_indicies[:,0],'o', color='red')
-            plt.plot(object_indicies[1],object_indicies[0],'o', color='black')
+            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
+            plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.plot(waypoint[1], waypoint[0], 'o', color='orange')
             plt.show()
         flag=False
         return waypoint, flag
     
-    def generate_waypoint(object_point,obsticle_points, tf_cad2cloud, tf_cloud2cad):
-        pkl_filename = "cad_costmap.pkl"
-        with open(navsea+"/scripts/"+pkl_filename, 'rb') as file:
-            cad_costmap_msg = pickle.load(file) # replace to be recieved from msg   
-        max_dist=max_distance
-        min_dist=min_distance
+    def generate_waypoint(self, object_point,obstacle_points):
+        self.max_distance=self.max_distance_base
+        self.min_distance=self.min_distance_base
+
         flag=True
-        plot=False
+        self.plot=False
         while flag:
-            waypoint_indicies, flag = generate(obsticle_points, cad_costmap_msg, object_point, tf_cad2cloud, tf_cloud2cad, max_dist=max_dist,min_dist=min_dist, plot=plot)
-            max_dist=max_dist*1.1
-            min_dist=min_dist*0.9
+            waypoint_indicies, flag = self.generate(obstacle_points, object_point)
+            self.max_distance=self.max_distance*1.1
+            self.min_distance=self.min_distance*0.9
     
-        plot=True
+        self.plot=True
         
         if not flag:
-            waypoint = waypoint_indicies_to_msg(cad_costmap_msg,object_point, [waypoint_indicies], tf_cad2cloud, resolution)
+            waypoint = self.waypoint_indicies_to_msg(object_point, [waypoint_indicies])
             print(waypoint)
             return waypoint
         else:
@@ -279,25 +292,19 @@ class waypoint_generator:
             return waypoint_indicies
     
 if __name__ == "__main__": 
+    topic="/move_base/global_costmap/costmap"
+    rospy.init_node('FOD_Detection',anonymous=False)
+    map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
+    tf=np.eye(4)
+# pkl_filename = "cad_costmap.pkl"
+# with open(self.navsea+"/scripts/"+pkl_filename, 'rb') as file:
+#     costmap= pickle.load(file) # replace to be recieved from msg 
     test_points=[[ 0.26146433, -2.37086167,  0.49230829],
  	[ 0.60216947, -0.2426275,   0.34959391],
  	[ 1.32999525, -1.53629,     0.16368696],
 	 [ 2.4402498,  -1.32006528,  0.06624348],
 	 [ 5.20872064, -0.20594317,  0.41271756]]
+    waypoint_generator=Waypoint_Generator(map_data, tf)
     for test_point in test_points:
-         test_point = np.array(test_point)
-    
-         tf_cloud2cad=[[-9.99973519e-01, -7.20862060e-03, -9.98112829e-04,  2.60570437e-02],
- [ 7.20890875e-03, -9.99973975e-01, -2.85397093e-04,  1.40439794e-02],
- [-9.96029533e-04, -2.92584840e-04,  9.99999461e-01, -5.38154708e-03],
- [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]
-
-
-
-         tf_cad2cloud=[[-9.99973519e-01,  7.20890875e-03, -9.96029533e-04, 2.59497517e-02],
- [-7.20862060e-03, -9.99973975e-01, -2.92584840e-04,  1.42298747e-02],
- [-9.98112829e-04, -2.85397093e-04,  9.99999461e-01,  5.41156016e-03],
- [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]
-
-
-         generate_waypoint(test_point,tf_cad2cloud,tf_cloud2cad )
+        test_point = np.array(test_point)
+        waypoint_generator.generate_waypoint(test_point)
