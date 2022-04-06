@@ -22,7 +22,7 @@ class Waypoint_Generator:
     '''
     Contructor
     '''
-    def __init__(self,map_msg, tf):
+    def __init__(self,map_msg, tf, obstacle_points=[]):
         rospack=rospkg.RosPack()
         self.navsea=rospack.get_path('navsea')
         with open(self.navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
@@ -33,7 +33,7 @@ class Waypoint_Generator:
         self.resolution=params["resolution"]
         self.min_distance_base=params["min_distance"]
         self.max_distance_base=params["max_distance"]
-
+        self.obstacle_points=obstacle_points
         self.cost_threshold=params["cost_threshold"]
         self.ray_sim_step=params["ray_sim_step"]
         self.parse_map_msg(map_msg)
@@ -174,11 +174,12 @@ class Waypoint_Generator:
         min_cost_index = ray_costs.argmin()
         return candidates[min_cost_index]
     
-    def generate(self, obstacle_points, object_point, plot=False):
+    def generate(self, object_point, plot=False):
         flag =  True # flag if failed to find waypoints
         cad_costmap=self.costmap
         object_index=self.point2index(object_point)
         costmap_tree=self.costmap_tree
+        obstacle_points=self.obstacle_points
         if not len(obstacle_points)==0:
             obstacle_indicies=self.point2index(obstacle_points)
             obstacle_tree = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(obstacle_indicies)
@@ -270,14 +271,14 @@ class Waypoint_Generator:
         flag=False
         return waypoint, flag
     
-    def generate_waypoint(self, object_point,obstacle_points):
+    def generate_waypoint(self, object_point):
         self.max_distance=self.max_distance_base
         self.min_distance=self.min_distance_base
 
         flag=True
         self.plot=False
         while flag:
-            waypoint_indicies, flag = self.generate(obstacle_points, object_point)
+            waypoint_indicies, flag = self.generate(object_point)
             self.max_distance=self.max_distance*1.1
             self.min_distance=self.min_distance*0.9
     
