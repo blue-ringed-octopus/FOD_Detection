@@ -71,13 +71,13 @@ class Waypoint_Generator:
         return np.transpose(newPoints)
     
     def index2point(self, waypoint_indicies): 
-        points = [ np.append(index[0]*self.resolution + self.origin.position.x, 
-    		index[1]*self.resolution + self.origin.position.y) for index in waypoint_indicies]
+        points = [ np.append(index[0]*self.resolution + self.origin.x, 
+    		index[1]*self.resolution + self.origin.y) for index in waypoint_indicies]
         return np.asarray(points)
     
     def point2index(self, points):
-        indices=[np.array([abs(round((self.origin.position.x-point[0])/self.resolution)),
-                                    abs(round((self.origin.position.y-point[1])/self.resolution))]) for point in points]
+        indices=[np.array([abs(round((self.origin.x-point[0])/self.resolution)),
+                                    abs(round((self.origin.y-point[1])/self.resolution))]) for point in points]
         return np.asarray(indices).astype(np.int)
     
     def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
