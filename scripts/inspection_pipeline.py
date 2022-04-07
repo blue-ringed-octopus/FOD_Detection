@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -11,7 +11,7 @@ from FOD_Detection import FOD_Detector
 import numpy as np
 import tank_loop_nav as tl
 from waypoint_generation import Waypoint_Generator
-import greedy_scheduler as gs
+# import greedy_scheduler as gs
 import snapshot
 import navigate_to_point as n2p
 from std_srvs.srv import Empty
@@ -77,7 +77,10 @@ if __name__ == "__main__":
                     [2, -1.5,  0]]
         for i in range(numFOD):
             print("Navigating to FOD Candidate "+str(i+1)+"/"+str(numFOD))
-            (idx,cloesetPoint)=gs.greedy_scheduler(waypoints)
+            # (idx,cloesetPoint)=gs.greedy_scheduler(waypoints)
+            idx=i
+            cloesetPoint=waypoints[idx]
+
             print(cloesetPoint)
             print(waypoints[idx])
             del waypoints[idx]
