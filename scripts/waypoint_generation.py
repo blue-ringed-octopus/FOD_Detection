@@ -173,7 +173,8 @@ class Waypoint_Generator:
         min_cost_index = ray_costs.argmin()
         return candidates[min_cost_index]
     
-    def generate(self, object_point, plot=False):
+    def generate(self, object_point):
+        plot=self.plot
         flag =  True # flag if failed to find waypoints
         verbose=self.verbose
         cad_costmap=self.costmap
