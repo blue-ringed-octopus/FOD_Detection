@@ -161,14 +161,14 @@ class Waypoint_Generator:
                     print(str(distance)+"/"+str(r))
                 x_pos += step*cos(theta)
                 y_pos += step*sin(theta)
-            if int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
-               continue
-            else:
-                ray_cost += costmap[int(round(x_pos)), int(round(y_pos))]
-                distance = sqrt((x_pos-candidate[0])**2 + (y_pos-candidate[1])**2)
-                if costmap[int(round(x_pos)), int(round(y_pos))] >= np.inf or int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
-                    save_candidate = False
-                    break
+                if int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
+                   continue
+                else:
+                    ray_cost += costmap[int(round(x_pos)), int(round(y_pos))]
+                    distance = sqrt((x_pos-candidate[0])**2 + (y_pos-candidate[1])**2)
+                    if costmap[int(round(x_pos)), int(round(y_pos))] >= np.inf or int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
+                        save_candidate = False
+                        break
             if save_candidate:
                 new_candidates += [[candidate[0], candidate[1], theta]] # also store theta for later
                 ray_costs += [ray_cost]
