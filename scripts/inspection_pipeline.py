@@ -72,7 +72,9 @@ if __name__ == "__main__":
             print("waypoints: "+str(waypoints))
 		
         numFOD=len(waypoints)
-
+        waypoints=[[ 1.5, -0.5,  0],
+                   [ -0.5, 1.5,  0],
+                    [2, -1.5,  0]]
         for i in range(numFOD):
             print("Navigating to FOD Candidate "+str(i+1)+"/"+str(numFOD))
             (idx,cloesetPoint)=gs.greedy_scheduler(waypoints)
