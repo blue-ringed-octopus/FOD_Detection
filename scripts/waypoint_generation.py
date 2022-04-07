@@ -82,7 +82,6 @@ class Waypoint_Generator:
     
     def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
         point=self.index2point(waypoint_indicies)
-        #tf_init=np.asarray([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
         p=self.project_tf(self.tf, point)[0]
         x=p[0]
         y=p[1]
@@ -110,7 +109,7 @@ class Waypoint_Generator:
     def generate_candidates(self, point):
         min_dist = int(abs(round(self.min_distance/self.resolution)))
         max_dist = int(abs(round(self.max_distance/self.resolution)))
-        neighborhood = (self.costmap_tree.data[self.costmap_tree.query_ball_point(point, max_dist)]).astype(np.int)
+        neighborhood = (self.costmap_tree.data[self.costmap_tree.query_ball_point(point, max_dist)]).astype(int)
         candidates = []
         for neighbor in neighborhood:
             if sqrt((neighbor[0]-point[0])**2 + (neighbor[1]-point[1])**2) > min_dist:
@@ -125,7 +124,7 @@ class Waypoint_Generator:
         new_candidates = []
         for candidate in candidates: 
             save_candidate = 1
-            neighborhood = (costmap_tree.data[costmap_tree.query_ball_point(candidate, radius)]).astype(np.int)
+            neighborhood = (costmap_tree.data[costmap_tree.query_ball_point(candidate, radius)]).astype(int)
             for neighbor in neighborhood:
                 if costmap[neighbor[0], neighbor[1]] >= cost_threshold:
                     save_candidate = 0
