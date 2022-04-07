@@ -241,7 +241,7 @@ class Waypoint_Generator:
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
     
-        candidates, ray_costs = self.filter_raytrace(cad_costmap, candidates, object_index)  
+        candidates, ray_costs = self.filter_raytrace(candidates, object_index)  
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
             return nan, flag
