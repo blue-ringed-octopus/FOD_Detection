@@ -78,7 +78,7 @@ class Waypoint_Generator:
     def point2index(self, point):
         index=np.array([abs(round((self.origin.x-point[0])/self.resolution)),
                                     abs(round((self.origin.y-point[1])/self.resolution))])
-        return np.asarray(index).astype(np.int)
+        return np.asarray(index).astype(int)
     
     def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
         point=self.index2point(waypoint_indicies)
