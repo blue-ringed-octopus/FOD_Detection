@@ -27,11 +27,11 @@ def simple_move(x,y,w,z):
     sac.wait_for_server()
     #send goal
     sac.send_goal(goal)
-    print "Sending goal:",x,y,w,z
+    print("Sending goal:",x,y,w,z)
     #finish
     sac.wait_for_result()
     #print result
-    print sac.get_result()
+    print(sac.get_result())
 
 def talker(coordinates):
     #publishing as PoseArray, as a reference for user
@@ -55,24 +55,24 @@ def talker(coordinates):
         #To not have to deal with threading, Im gonna publish just a couple times in the begging, and then continue with telling the robot to go to the points
     count = 0
     while count<1:
-		rate.sleep()	
-		pub.publish(array)
-		count +=1
+        rate.sleep()	
+        pub.publish(array)
+        count +=1
 
 def tank_loop_routine(num_loop):
     for i in range(num_loop):
-	    print("Loop"+str(i+1)+"/"+str(num_loop))
-	    try:
+        print("Loop"+str(i+1)+"/"+str(num_loop))
+        try:
 
 		#actually sending commands for the robot to travel
-		f = open(navsea+'/scripts/tank_loop_waypoints.csv','r')
-		for goal in f:
-				coordinates = goal.split(",")
-				simple_move(float(coordinates[0]),float(coordinates[1]),float(coordinates[2]),float(coordinates[3]))
-				talker(coordinates)
-	    except rospy.ROSInterruptException:
-		print "Keyboard Interrupt"
-		break
+            f = open(navsea+'/scripts/tank_loop_waypoints.csv','r')
+            for goal in f:
+                coordinates = goal.split(",")
+                simple_move(float(coordinates[0]),float(coordinates[1]),float(coordinates[2]),float(coordinates[3]))
+                talker(coordinates)
+        except rospy.ROSInterruptException:
+            print("Keyboard Interrupt")
+            break
 
 if __name__ == '__main__':
 	rospy.init_node('simple_move')
