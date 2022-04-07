@@ -25,11 +25,11 @@ def simple_move(x,y,w,z):
     sac.wait_for_server()
     #send goal
     sac.send_goal(goal)
-    print "Sending goal:",x,y,w,z
+    print("Sending goal:",x,y,w,z)
     #finish
     sac.wait_for_result()
     #print result
-    print sac.get_result()
+    print (sac.get_result())
 
 def talker(coordinates):
     array = PoseArray()
@@ -48,15 +48,15 @@ def talker(coordinates):
         #To not have to deal with threading, Im gonna publish just a couple times in the begging, and then continue with telling the robot to go to the points
     count = 0
     while count<1:
-		rate.sleep()	
-		pub.publish(array)
-		count +=1
+        rate.sleep()	
+        pub.publish(array)
+        count +=1
 def navigate2point(coordinates):
     try:
-	simple_move((coordinates[0]),(coordinates[1]),(coordinates[2]),(coordinates[3]))
-	talker(coordinates)
+        simple_move((coordinates[0]),(coordinates[1]),(coordinates[2]),(coordinates[3]))
+        ker(coordinates)
     except rospy.ROSInterruptException:
-	print "Keyboard Interrupt"
+        print ("Keyboard Interrupt")
 		
 
 if __name__ == '__main__':
