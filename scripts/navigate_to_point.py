@@ -54,7 +54,7 @@ def talker(coordinates):
 def navigate2point(coordinates):
     try:
         simple_move((coordinates[0]),(coordinates[1]),(coordinates[2]),(coordinates[3]))
-        ker(coordinates)
+        talker(coordinates)
     except rospy.ROSInterruptException:
         print ("Keyboard Interrupt")
 		
