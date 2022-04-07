@@ -141,11 +141,14 @@ class Waypoint_Generator:
         return candidates
     
     def filter_raytrace(self, candidates, point):
+        verbose=self.verbose
         costmap=self.costmap
         step=self.ray_sim_step
         new_candidates = []
         ray_costs = []
         for candidate in candidates:
+            if verbose:
+                print("candidate", candidate)
             save_candidate = True
             r = sqrt((candidate[0] - point[0])**2 + (candidate[1] - point[1])**2)
             theta = atan2((point[1] - candidate[1]), (point[0] - candidate[0]))
@@ -154,6 +157,8 @@ class Waypoint_Generator:
             distance = 0
             ray_cost = 0
             while distance < r:
+                if verbose:
+                    print(str(distance)+"/"+str(r))
                 x_pos += step*cos(theta)
                 y_pos += step*sin(theta)
             if int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
@@ -285,13 +290,13 @@ class Waypoint_Generator:
         self.min_distance=self.min_distance_base
 
         flag=True
-        self.plot=True
+        self.plot=False
         while flag:
             waypoint_indicies, flag = self.generate(object_point)
             self.max_distance=self.max_distance*1.1
             self.min_distance=self.min_distance*0.9
     
-        self.plot=True
+        self.plot=False
         
         if not flag:
             waypoint = self.waypoint_indicies_to_msg(object_point, [waypoint_indicies])
