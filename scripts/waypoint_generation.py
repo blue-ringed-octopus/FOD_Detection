@@ -308,11 +308,7 @@ if __name__ == "__main__":
 # pkl_filename = "cad_costmap.pkl"
 # with open(self.navsea+"/scripts/"+pkl_filename, 'rb') as file:
 #     costmap= pickle.load(file) # replace to be recieved from msg 
-    test_points=[[ 0.26146433, -2.37086167,  0.49230829],
- 	[ 0.60216947, -0.2426275,   0.34959391],
- 	[ 1.32999525, -1.53629,     0.16368696],
-	 [ 2.4402498,  -1.32006528,  0.06624348],
-	 [ 5.20872064, -0.20594317,  0.41271756]]
+    test_points=[[ 1.5, -0.5,  0]]
     waypoint_generator=Waypoint_Generator(map_data, tf,verbose=True)
     for test_point in test_points:
         test_point = np.array(test_point)
