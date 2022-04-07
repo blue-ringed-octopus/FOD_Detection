@@ -22,7 +22,7 @@ class Waypoint_Generator:
     '''
     Contructor
     '''
-    def __init__(self,map_msg, tf, obstacle_points=[]):
+    def __init__(self,map_msg, tf, obstacle_points=[], verbose=False):
         rospack=rospkg.RosPack()
         self.navsea=rospack.get_path('navsea')
         with open(self.navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
@@ -38,7 +38,7 @@ class Waypoint_Generator:
         self.ray_sim_step=params["ray_sim_step"]
         self.parse_map_msg(map_msg)
         self.generate_tree()
-
+        self.verbose=verbose
     
     def parse_map_msg(self,map_msg):
         w = map_msg.info.width
@@ -175,8 +175,10 @@ class Waypoint_Generator:
     
     def generate(self, object_point, plot=False):
         flag =  True # flag if failed to find waypoints
+        verbose=self.verbose
         cad_costmap=self.costmap
-        print("object point",object_point)
+        if verbose:
+            print("object point",object_point)
         object_index=self.point2index(object_point)
         costmap_tree=self.costmap_tree
         obstacle_points=self.obstacle_points
@@ -188,14 +190,16 @@ class Waypoint_Generator:
             plt.imshow(cad_costmap)
             plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.show()
-    
+        if verbose:
+            print("generating candidates")
         candidates = self.generate_candidates(object_index)
         if plot:
             plt.imshow(cad_costmap)
             plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
-        
+        if verbose:
+            print("filtering collision candidates")
         candidates = self.filter_collision(candidates)
     	
         while candidates.size == 0:
@@ -305,7 +309,7 @@ if __name__ == "__main__":
  	[ 1.32999525, -1.53629,     0.16368696],
 	 [ 2.4402498,  -1.32006528,  0.06624348],
 	 [ 5.20872064, -0.20594317,  0.41271756]]
-    waypoint_generator=Waypoint_Generator(map_data, tf)
+    waypoint_generator=Waypoint_Generator(map_data, tf,verbose=True)
     for test_point in test_points:
         test_point = np.array(test_point)
         waypoint_generator.generate_waypoint(test_point)
