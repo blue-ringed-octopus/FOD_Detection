@@ -182,7 +182,7 @@ class Waypoint_Generator:
         costmap_tree=self.costmap_tree
         obstacle_points=self.obstacle_points
         if not len(obstacle_points)==0:
-            obstacle_indicies=self.point2index(obstacle_points)
+            obstacle_indicies=[self.point2index(pt) for pt in obstacle_points]
             obstacle_tree = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(obstacle_indicies)
             
         if plot:
@@ -197,7 +197,7 @@ class Waypoint_Generator:
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
         
-        candidates = self.filter_collision(cad_costmap, costmap_tree, candidates)
+        candidates = self.filter_collision(candidates)
     	
         while candidates.size == 0:
           print("No valid candidate, retrying with increased tolerance")
