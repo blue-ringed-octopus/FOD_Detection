@@ -231,6 +231,8 @@ class Waypoint_Generator:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
             return nan, flag
         #print(len(candidates))
+        if verbose:
+            print("reduce candidates counts")
         if len(candidates)>250:
             idx=random.sample(range(0,len(candidates)), 250)
             candidates=candidates[idx]
@@ -243,7 +245,8 @@ class Waypoint_Generator:
             plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
-    
+        if verbose:
+            print("raytracing candidates")
         candidates, ray_costs = self.filter_raytrace(candidates, object_index)  
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
@@ -263,7 +266,8 @@ class Waypoint_Generator:
             plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
-        
+        if verbose:
+            print("optimize ray cost")
         waypoint = self.minimize_ray_cost(candidates, ray_costs)
     
         if plot:
