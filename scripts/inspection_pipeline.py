@@ -59,7 +59,7 @@ if __name__ == "__main__":
         objectPoints=fod_detector.fod_centroids
         print(tf)
         #Picture generation 
-        print("Number of FOD candidate found: "+str(len(fod_detector.objectPoints)))
+        print("Number of FOD candidate found: "+str(len(objectPoints)))
 
         waypoints=[]
         print("Calculating waypoint location...")
