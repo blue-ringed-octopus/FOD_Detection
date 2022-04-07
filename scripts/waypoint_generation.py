@@ -177,6 +177,7 @@ class Waypoint_Generator:
     def generate(self, object_point, plot=False):
         flag =  True # flag if failed to find waypoints
         cad_costmap=self.costmap
+        print("object point",object_point)
         object_index=self.point2index(object_point)
         costmap_tree=self.costmap_tree
         obstacle_points=self.obstacle_points
