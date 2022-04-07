@@ -157,8 +157,6 @@ class Waypoint_Generator:
             distance = 0
             ray_cost = 0
             while distance < r:
-                if verbose:
-                    print(str(distance)+"/"+str(r))
                 x_pos += step*cos(theta)
                 y_pos += step*sin(theta)
                 if int(round(x_pos))>=costmap.shape[0] or int(round(y_pos))>=costmap.shape[1]:
@@ -318,4 +316,6 @@ if __name__ == "__main__":
     waypoint_generator=Waypoint_Generator(map_data, tf,verbose=True)
     for test_point in test_points:
         test_point = np.array(test_point)
-        waypoint_generator.generate_waypoint(test_point)
+        waypoint=waypoint_generator.generate_waypoint(test_point)
+    import navigate_to_point as n2p
+    n2p.navigate2point(waypoint)
