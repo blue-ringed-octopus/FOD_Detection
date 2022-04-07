@@ -10,11 +10,12 @@ import rospy
 from FOD_Detection import FOD_Detector
 import numpy as np
 import tank_loop_nav as tl
-import waypoint_generation as wg
+from waypoint_generation import Waypoint_Generator
 import greedy_scheduler as gs
 import snapshot
 import navigate_to_point as n2p
 from std_srvs.srv import Empty
+from nav_msgs.msg import OccupancyGrid
 
 def loop_input():
 	inp=""
@@ -51,8 +52,9 @@ if __name__ == "__main__":
         fod_detector=FOD_Detector()
         fod_detector.FOD_Detection_routine()
 
-        tf=fod_detector.tf        
-        tf_inv=np.linalg.inv(tf)
+        # tf=fod_detector.tf        
+        # tf_inv=np.linalg.inv(tf)
+        tf=np.eye(4)
         obsticle_points=fod_detector.Project_obsticles()
         objectPoints=fod_detector.fod_centroids
         print(tf)
@@ -61,8 +63,12 @@ if __name__ == "__main__":
 
         waypoints=[]
         print("Calculating waypoint location...")
+        topic="/move_base/global_costmap/costmap"
+        map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
+        waypoint_generator=Waypoint_Generator(map_data, tf)
+
         for point in objectPoints:
-            waypoints.append(wg.generate_waypoint(point,obsticle_points,tf_inv, tf))
+            waypoints.append(waypoint_generator.generate_waypoint(point))
             print("waypoints: "+str(waypoints))
 		
         numFOD=len(waypoints)
