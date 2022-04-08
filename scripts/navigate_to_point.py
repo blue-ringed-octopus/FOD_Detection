@@ -49,12 +49,14 @@ def talker(coordinates):
     count = 0
     while count<1:
         rate.sleep()	
+        print("sending rviz arrow")
         pub.publish(array)
         count +=1
 def navigate2point(coordinates):
     try:
         simple_move((coordinates[0]),(coordinates[1]),(coordinates[2]),(coordinates[3]))
         talker(coordinates)
+        print("goal reached")
     except rospy.ROSInterruptException:
         print ("Keyboard Interrupt")
 		
