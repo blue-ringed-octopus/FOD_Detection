@@ -13,12 +13,14 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 
+topic="/camera/color/image_raw"
+#'/stereo_camera/left/image_rect_color'
 rospack=rospkg.RosPack()
 navsea=rospack.get_path('navsea')
 def get_message():
 	try:
 
-		data=rospy.wait_for_message('/stereo_camera/left/image_rect_color',Image)
+		data=rospy.wait_for_message(topic,Image)
 		return data 
 	except rospy.ServiceException as e:
 		print("Service all failed: %s"%e)
