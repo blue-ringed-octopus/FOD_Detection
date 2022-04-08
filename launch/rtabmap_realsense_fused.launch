@@ -331,7 +331,7 @@
       <remap from="grid_map"       to="/map"/>
 
       <param name="Grid/FromDepth" type="string" value="true"/>
-      <param name="Grid/CellSize" type="double" value="0.05"/>
+      <param name="Grid/CellSize" type="double" value="0.01"/>
       <param name="Grid/DepthDecimation" value="1"/>
       <param name="Grid/MaxGroundHeight" value="0.05"/>
       <param name="Grid/MaxObstacleHeight" value="1"/>
