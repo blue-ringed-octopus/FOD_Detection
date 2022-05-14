@@ -27,8 +27,8 @@ class Waypoint_Generator:
         self.navsea=rospack.get_path('navsea')
         with open(self.navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
             params= yaml.safe_load(file)
-        self.tf=tf
-        self.tf_inv=np.linalg.inv(tf)
+        self.tf_m2r=tf
+        self.tf_r2m=np.linalg.inv(tf)
         self.robot_radius=params["robot_radius"]
         self.resolution=params["resolution"]
         self.min_distance_base=params["min_distance"]
@@ -82,11 +82,11 @@ class Waypoint_Generator:
     
     def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
         point=self.index2point(waypoint_indicies)
-        p=self.project_tf(self.tf, point)[0]
+        p=self.project_tf(self.tf_r2m, point)[0]
         x=p[0]
         y=p[1]
     
-        p_obj=self.project_tf(self.tf, [object_point])[0]
+        p_obj=self.project_tf(self.tf_r2m, [object_point])[0]
         x_obj=p_obj[0]
         y_obj=p_obj[1]
     

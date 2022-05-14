@@ -10,28 +10,28 @@ import numpy as np
 import ros_numpy
 import rospy 
 import rospkg
-import tf
 
-def Get_current_location():
-	listener = tf.TransformListener()
-	
-	trans=[]
-	while trans==[]:
-		try:
-			(trans,rot)= listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-		except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
-			continue
-		return trans
+# def Get_current_location():
+# 	listener = tf.TransformListener()
+# 	
+# 	trans=[]
+# 	while trans==[]:
+# 		try:
+# 			(trans,rot)= listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+# 		except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+# 			continue
+# 		return trans
 
 def find_closest_point(loc, objectives):
 	dist=np.sum((np.asarray(loc)-(np.asarray(objectives))[:,0:2])**2,axis=1)
 	idx=np.argmin(dist)
 	return (idx,objectives[idx])
 
-def greedy_scheduler(objectives):
-	trans=Get_current_location()
-	(idx, closest_point)=find_closest_point(trans[0:2], objectives)
-	return (idx, closest_point)
+def greedy_scheduler(objectives, curr_loc):
+	#trans=Get_current_location()
+	#(idx, closest_point)=find_closest_point(trans[0:2], objectives)
+    (idx, closest_point)=find_closest_point(curr_loc[0:2], objectives)
+    return (idx, closest_point)
 
 if __name__ == "__main__":
 	rospy.init_node('tf_listener')

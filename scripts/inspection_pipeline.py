@@ -11,8 +11,7 @@ from FOD_Detection import FOD_Detector
 import numpy as np
 import tank_loop_nav as tl
 from waypoint_generation import Waypoint_Generator
-# import greedy_scheduler as gs
-import snapshot
+import greedy_scheduler as gs
 import navigate_to_point as n2p
 from std_srvs.srv import Empty
 from nav_msgs.msg import OccupancyGrid
@@ -52,9 +51,8 @@ if __name__ == "__main__":
         fod_detector=FOD_Detector()
         fod_detector.FOD_Detection_routine()
 
-        # tf=fod_detector.tf        
-        # tf_inv=np.linalg.inv(tf)
-        tf=np.eye(4)
+        tf=fod_detector.tf        
+        tf_inv=np.linalg.inv(tf)
         obsticle_points=fod_detector.Project_obsticles()
         objectPoints=fod_detector.fod_centroids
         print(tf)
@@ -67,23 +65,21 @@ if __name__ == "__main__":
         map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
         waypoint_generator=Waypoint_Generator(map_data, tf)
         
-        objectPoints=[[ 1.5, -0.5,  0],
-                   [ -0.5, 1.5,  0],
-                    [2, -1.5,  0]]
+        # objectPoints=[[ 1.5, -0.5,  0],
+        #            [ -0.5, 1.5,  0],
+        #             [2, -1.5,  0]]
         for point in objectPoints:
             waypoints.append(waypoint_generator.generate_waypoint(point))
             print("waypoints: "+str(waypoints))
 		
         numFOD=len(waypoints)
-        
+        waypoint_prev=[0,0,0]
         for i in range(numFOD):
             print("Navigating to FOD Candidate "+str(i+1)+"/"+str(numFOD))
-            # (idx,cloesetPoint)=gs.greedy_scheduler(waypoints)
-            idx=i
+            (idx,cloesetPoint)=gs.greedy_scheduler(waypoint_prev, waypoints)
             cloesetPoint=waypoints[idx]
-
             print(cloesetPoint)
-            print(waypoints[idx])
+            waypoint_prev=cloesetPoint
             del waypoints[idx]
             n2p.navigate2point(cloesetPoint)
             #snapshot.snapshot("FOD_candidate_"+str(i+1))
