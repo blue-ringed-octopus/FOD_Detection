@@ -23,7 +23,7 @@ import rospkg
 # 		return trans
 
 def find_closest_point(loc, objectives):
-	dist=np.sum((np.asarray(loc)-(np.asarray(objectives))[:,0:2])**2,axis=1)
+	dist=np.sum((np.asarray(loc)-(np.asarray(objectives))[0:2])**2,axis=1)
 	idx=np.argmin(dist)
 	return (idx,objectives[idx])
 
