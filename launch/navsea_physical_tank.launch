@@ -25,6 +25,8 @@
 
   <node pkg="image_view" name="image_saver" type="image_saver" output="screen">
 	<param name="filename_format"      type="string"    value="left%04d.png"/>
+	<param name="save_all_image"      type="bool"    value="false"/>
+
   </node>
 
 </launch>
