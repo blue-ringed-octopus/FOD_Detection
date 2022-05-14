@@ -22,4 +22,9 @@
 
 
   <node pkg="navsea" name="cov_append" type="odom_covariance.py" output="screen"/>
+
+  <node pkg="image_view" name="image_saver" type="image_saver" output="screen">
+	<param name="filename_format"      type="string"    value="left%04d.png"/>
+  </node>
+
 </launch>
