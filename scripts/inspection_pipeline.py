@@ -86,7 +86,10 @@ if __name__ == "__main__":
             print(waypoints[idx])
             del waypoints[idx]
             n2p.navigate2point(cloesetPoint)
-            snapshot.snapshot("FOD_candidate_"+str(i+1))
+            #snapshot.snapshot("FOD_candidate_"+str(i+1))
+            save_im=rospy.ServiceProxy('rtabmap/set_mode_localization',Empty)
+            save_im()
+            print("image saved")
     except KeyboardInterrupt:
         print("Terminating")
 		
