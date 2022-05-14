@@ -82,7 +82,7 @@ class FOD_Detector:
         
         cloud=cloud.transform(tf.transformation)
         in_bound=pclib.crop_cloud_par(np.asarray(cloud.points), bound)
-        self.tf=tf
+        self.tf=tf.transformation
         self.cloud=cloud.select_by_index(in_bound)
        
         rospy.loginfo("Creating KD-tree")
