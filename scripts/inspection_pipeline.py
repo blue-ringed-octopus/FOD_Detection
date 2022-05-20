@@ -62,7 +62,7 @@ if __name__ == "__main__":
         print("Calculating waypoint location...")
         topic="/move_base/global_costmap/costmap"
         map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
-        waypoint_generator=Waypoint_Generator(map_data, tf)
+        waypoint_generator=Waypoint_Generator(map_data, tf, verbose=True)
         
         # objectPoints=[[ 1.5, -0.5,  0],
         #            [ -0.5, 1.5,  0],
