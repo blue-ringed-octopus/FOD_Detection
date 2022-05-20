@@ -246,7 +246,7 @@ class Waypoint_Generator:
         if plot:
             plt.imshow(cad_costmap)
             plt.plot(object_index[1],object_index[0],'o', color='black')
-            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
+        #    plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
         if verbose:
@@ -267,7 +267,7 @@ class Waypoint_Generator:
         if False:
             plt.imshow(cad_costmap)
             plt.plot(object_index[1],object_index[0],'o', color='black')
-            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
+          #  plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()
         if verbose:
@@ -276,7 +276,7 @@ class Waypoint_Generator:
     
         if plot:
             plt.imshow(cad_costmap)
-            plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
+     #       plt.plot(obstacle_indicies[:,1],obstacle_indicies[:,0],'o', color='red')
             plt.plot(object_index[1],object_index[0],'o', color='black')
             plt.plot(waypoint[1], waypoint[0], 'o', color='orange')
             plt.show()
