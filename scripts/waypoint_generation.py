@@ -115,6 +115,8 @@ class Waypoint_Generator:
         for neighbor in neighborhood:
             if sqrt((neighbor[0]-point[0])**2 + (neighbor[1]-point[1])**2) > min_dist:
                 candidates += [[neighbor[0], neighbor[1]]]
+        idx=random.sample(range(0,len(candidates)), int(len(candidates)/5))
+        candidates=candidates[idx]
         return np.array(candidates)
     
     def filter_collision(self, candidates):
@@ -219,7 +221,7 @@ class Waypoint_Generator:
              plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
              plt.show()
         
-             candidates = self.filter_collision(cad_costmap, costmap_tree, candidates)
+             candidates = self.filter_collision(candidates)
     
      
     
@@ -229,7 +231,7 @@ class Waypoint_Generator:
             plt.plot(candidates[:,1], candidates[:,0], 'o', color='orange')
             plt.show()    
         if not len(obstacle_points)==0:
-            candidates = self.filter_obstacles (candidates, obstacle_tree)
+            candidates = self.filter_obstacles (candidates)
      
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
