@@ -23,14 +23,14 @@ import rospkg
 # 		return trans
 
 def find_closest_point(loc, objectives):
-	dist=np.sum((np.asarray(loc)-(np.asarray(objectives))[0:2])**2,axis=1)
+	dist=[np.sum((np.asarray(loc)[0:2]-(np.asarray(pt))[0:2])**2,axis=1) for pt in objectives]
 	idx=np.argmin(dist)
 	return (idx,objectives[idx])
 
 def greedy_scheduler(objectives, curr_loc):
 	#trans=Get_current_location()
 	#(idx, closest_point)=find_closest_point(trans[0:2], objectives)
-    (idx, closest_point)=find_closest_point(curr_loc[0:2], objectives)
+    (idx, closest_point)=find_closest_point(curr_loc, objectives)
     return (idx, closest_point)
 
 if __name__ == "__main__":
