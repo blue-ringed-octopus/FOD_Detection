@@ -116,8 +116,8 @@ class Waypoint_Generator:
             if sqrt((neighbor[0]-point[0])**2 + (neighbor[1]-point[1])**2) > min_dist:
                 candidates += [[neighbor[0], neighbor[1]]]
         idx=random.sample(range(0,len(candidates)), int(len(candidates)/5))
-        candidates=candidates[idx]
-        return np.array(candidates)
+        candidates=np.array(candidates)[idx]
+        return candidates
     
     def filter_collision(self, candidates):
         costmap=self.costmap
