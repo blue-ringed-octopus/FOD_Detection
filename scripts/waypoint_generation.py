@@ -289,14 +289,11 @@ class Waypoint_Generator:
         self.min_distance=self.min_distance_base
 
         flag=True
-        self.plot=False
         while flag:
             waypoint_indicies, flag = self.generate(object_point)
             self.max_distance=self.max_distance*1.1
             self.min_distance=self.min_distance*0.9
-    
-        self.plot=False
-        
+            
         if not flag:
             waypoint = self.waypoint_indicies_to_msg(object_point, [waypoint_indicies])
             print(waypoint)
