@@ -39,6 +39,7 @@ class Waypoint_Generator:
         self.parse_map_msg(map_msg)
         self.generate_tree()
         self.verbose=verbose
+        self.plot=verbose
     
     def parse_map_msg(self,map_msg):
         w = map_msg.info.width
