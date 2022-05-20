@@ -52,7 +52,6 @@ if __name__ == "__main__":
         fod_detector.FOD_Detection_routine()
 
         tf=fod_detector.tf        
-        tf_inv=np.linalg.inv(tf)
         obsticle_points=fod_detector.Project_obsticles()
         objectPoints=fod_detector.fod_centroids
         print(tf)
