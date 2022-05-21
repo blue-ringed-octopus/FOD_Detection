@@ -2,5 +2,5 @@ resolution: 0.01
 robot_radius: 0.25 # meters from object
 min_distance: 0.25 # meters from object
 max_distance: 0.75 # meters from object
-cost_threshold: 100 # waypoint will not go to cost >= this
+cost_threshold: 85 # waypoint will not go to cost >= this
 ray_sim_step: 0.02 # raytrace ray step
