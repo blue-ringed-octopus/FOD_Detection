@@ -18,7 +18,7 @@ import rospy
 from nav_msgs.msg import OccupancyGrid
 
 resolution = 0.01
-
+kernel_size=(5,5)
 # Initialize topics to publish:
 map_pub = rospy.Publisher('/map', OccupancyGrid, queue_size=1)
 
@@ -86,7 +86,7 @@ def map_merge_parallel(rmap_topic):
     rmap_array, rmap_origin, rmap_wh = topic_to_array(rmap_topic)
     rmap = array_to_image(rmap_array)
     # clean rtabmap map
-    noise_ksize = (10,10)
+    noise_ksize = kernel_size
     rmap = cv2.blur(rmap, noise_ksize)
     _, rmap = cv2.threshold(rmap,127,255,cv2.THRESH_BINARY)
     publish_map_img(rmap, rmap_origin, rmap_topic)

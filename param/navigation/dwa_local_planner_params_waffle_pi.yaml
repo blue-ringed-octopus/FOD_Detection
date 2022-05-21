@@ -11,8 +11,8 @@ DWAPlannerROS:
   max_vel_trans:  0.1 # was 0.26 | 0.20 wheel odom | 0.1 VO
   min_vel_trans:  0.05 # was 0.13 
 
-  max_vel_theta: 0.3 # was 1.82 | 1.0 wheel odom | 0.3 VO
-  min_vel_theta: 0.2 # was 0.09 |0.9 wheel odom | 0.2 VO
+  max_vel_theta: 0.2 # was 1.82 | 1.0 wheel odom | 0.3 VO
+  min_vel_theta: 0.1 # was 0.09 |0.9 wheel odom | 0.2 VO
 
   acc_lim_x: 2.5
   acc_lim_y: 0.0
