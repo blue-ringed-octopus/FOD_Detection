@@ -239,8 +239,8 @@ class Waypoint_Generator:
         #print(len(candidates))
         if verbose:
             print("reduce candidates counts")
-        if len(candidates)>250:
-            idx=random.sample(range(0,len(candidates)), 250)
+        if len(candidates)>100:
+            idx=random.sample(range(0,len(candidates)), 100)
             candidates=candidates[idx]
     
     
