@@ -8,7 +8,7 @@ DWAPlannerROS:
   min_vel_y: 0.0
 
 # The velocity when robot is moving in a straight line
-  max_vel_trans:  0.1 # was 0.26 | 0.20 wheel odom | 0.1 VO
+  max_vel_trans:  0.15 # was 0.26 | 0.20 wheel odom | 0.1 VO
   min_vel_trans:  0.05 # was 0.13 
 
   max_vel_theta: 0.2 # was 1.82 | 1.0 wheel odom | 0.3 VO
@@ -31,7 +31,7 @@ DWAPlannerROS:
   controller_frequency: 10.0
 
 # Trajectory Scoring Parameters
-  path_distance_bias: 60.0 # was 32.0; higher -> follows global path more
+  path_distance_bias: 50.0 # was 32.0; higher -> follows global path more
   goal_distance_bias: 1.0 # was 20.0
   occdist_scale: 0.1 # was 0.02
   forward_point_distance: 0.325
