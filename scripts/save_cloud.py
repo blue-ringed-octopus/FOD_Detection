@@ -13,7 +13,7 @@ import rospkg
 import threading
 import time
 import open3d as o3d
-import scipy as sp
+import scipy.io as io
 import os
 from sensor_msgs.msg import PointCloud2
 import Local_Covariance_Trainer as pclib
@@ -91,7 +91,7 @@ class Pointcloud_fetcher:
     def save_mat(self, path, file_name, cloud):
     	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
     	filename_num=get_file_name(path, file_name)
-    	sp.io.savemat(filename_num, mdic)
+    	io.savemat(filename_num, mdic)
     	print("saved to: "+filename_num)
     
     def get_raw_cloud(self):
