@@ -124,7 +124,7 @@ class FOD_Detector:
         params=self.params['fod_detection']
        # cloud_ds_ds, idx=pclib.random_downsample(self.cloud_ds, params["downsample_rate"])
        # dist=self.blur_dist[idx]
-        cloud_vox,_, idx=self.cloud_ds.voxel_down_sample_and_trace(self.params["fod_detection"]["cluster_voxel_size"], 
+        cloud_vox,_, idx=self.cloud_ds.voxel_down_sample_and_trace(self.params["clustering"]["cluster_voxel_size"], 
                                                                    self.cloud_ds.get_min_bound(), 
                                                                    self.cloud_ds.get_max_bound(), 
                                                                    False)
