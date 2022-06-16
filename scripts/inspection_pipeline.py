@@ -62,11 +62,8 @@ if __name__ == "__main__":
         print("Calculating waypoint location...")
         topic="/move_base/global_costmap/costmap"
         map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
-        waypoint_generator=Waypoint_Generator(map_data, tf, verbose=True)
+        waypoint_generator=Waypoint_Generator(map_data, tf, verbose=False)
         
-        # objectPoints=[[ 1.5, -0.5,  0],
-        #            [ -0.5, 1.5,  0],
-        #             [2, -1.5,  0]]
         for point in objectPoints:
             waypoints.append(waypoint_generator.generate_waypoint(point))
             print("waypoints: "+str(waypoints))
