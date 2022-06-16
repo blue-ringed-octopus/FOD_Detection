@@ -4,7 +4,7 @@ preprocess:
     icp_tf_init: [[1,  0,  0,0],[0,  1,0,0],[0, 0, 1 ,0], [0,0,0,1]]
     denosie_neightbor: 50
     denoise_std: 2.0
-    downsample_rate: 0.025
+    downsample_rate: 0.1
 
 fod_detection:
     cloud_info_uri: /home/navsea-jetson/catkin_ws/src/navsea/resource/mean_cloud_info.p    
@@ -18,3 +18,4 @@ smoothing:
 
 clustering:
     minimum_fod_point_count: 2
+    cluster_voxel_size: 0.05

@@ -122,8 +122,13 @@ class FOD_Detector:
         seperate points with high discrepency from the map 
         '''
         params=self.params['fod_detection']
-        cloud_ds_ds, idx=pclib.random_downsample(self.cloud_ds, params["downsample_rate"])
-        dist=self.blur_dist[idx]
+       # cloud_ds_ds, idx=pclib.random_downsample(self.cloud_ds, params["downsample_rate"])
+       # dist=self.blur_dist[idx]
+        cloud_vox,_, idx=self.cloud_ds.voxel_down_sample_and_trace(self.params["fod_detection"]["cluster_voxel_size"], 
+                                                                   self.cloud_ds.get_min_bound(), 
+                                                                   self.cloud_ds.get_max_bound(), 
+                                                                   False)
+        dist=np.asarray([np.average(self.blur_dist[i]) for i in idx])
         self.metric=params['metric']
         if self.metric=="l2":
             cutoff=params['l2-dist cutoff']
@@ -131,8 +136,8 @@ class FOD_Detector:
         else:
             cutoff=params['m-dist cutoff']
 
-        fods=cloud_ds_ds.select_by_index(np.where(dist>=cutoff)[0])
-        tank=cloud_ds_ds.select_by_index(np.where(dist<cutoff)[0])
+        fods=cloud_vox.select_by_index(np.where(dist>=cutoff)[0])
+        tank=cloud_vox.select_by_index(np.where(dist<cutoff)[0])
         
         self.fod_dist=dist[dist>=cutoff]
         fods.paint_uniform_color([1,0,0])
