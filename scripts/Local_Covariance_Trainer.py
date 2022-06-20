@@ -13,7 +13,56 @@ import colorsys as cs
 import copy
 from scipy.cluster import hierarchy
 import random
+def Isolate_FOD(cloud, dist, cutoff):
+    FODS=cloud.select_by_index(np.where(dist>=cutoff)[0])
+    Tank=cloud.select_by_index(np.where(dist<cutoff)[0])
+    
+    FOD_dist=dist[dist>=cutoff]
+    FODS.paint_uniform_color([1,0,0])
+    Tank.paint_uniform_color([0.2, 0.2 ,0.2])
+    return FODS, Tank, FOD_dist
 
+def Fod_clustering(cloud, minsize, cutoff, dist=[]):
+    points=np.asarray(cloud.points)
+    if len(points)<=minsize:
+        print("no fod")
+        return [],[]
+    labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)-1
+    num_point=np.bincount(labels)
+    print(num_point)
+    clouds=[]
+    dists=[]
+    for i in range(max(labels)+1):
+        if num_point[i]>=minsize:
+            pointlist=[points[j] for j in range(len(points)) if i==labels[j]]
+            if len(dist)!=0:
+                dists+=[[dist[j] for j in range(len(points)) if i==labels[j]]]
+            clouds.append(Cloud_from_points(pointlist))
+    for i in range(len(clouds)):
+        rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
+        clouds[i].paint_uniform_color(rgb)
+    return clouds, dists    
+
+def Cluster_centroid(clusters, weights=None):
+    '''
+    documentation
+    '''
+    centroids=[]
+    for i, cluster in enumerate(clusters):
+        points=np.asarray(cluster.points)
+        centroids.append(np.average(points,axis=0, weights=weights[i]))
+    return np.asarray(centroids)
+
+def plot_fod_centroid(base_pc, centroids, window_name="centroid"):
+    spheres=[]
+    for points in centroids:
+        spheres.append(o3d.geometry.TriangleMesh.create_sphere(radius=0.05))
+        tf=np.eye(4)
+        tf[0:3,3]=points
+        spheres[-1]=spheres[-1].transform(tf)
+        spheres[-1].paint_uniform_color([1,0,0])
+    o3d.visualization.draw_geometries([base_pc]+spheres,window_name=window_name)
+    
 def display_inlier_outlier(cloud, ind):
     inlier_cloud = cloud.select_by_index(ind)
     outlier_cloud = cloud.select_by_index(ind, invert=True)
@@ -304,8 +353,6 @@ class Local_Covariance_Trainer:
             dist=np.asarray(dist)
         if method=='mean':
             for j in range(1):
-            #      cov_smooth=([(np.sum(covariance[closest_index_kd[i]],0))/(np.sum(num_sample[closest_index_kd[i]])+num_sample[i]) 
-#                                if (np.sum(num_sample[closest_index_kd[i]])+num_sample[i])!=0 else np.ones((3,3))*np.nan for i, pt in enumerate(sample)])
                     cov_smooth=([(np.sum(covariance[closest_index_kd[i]],0))/(np.sum(num_sample[closest_index_kd[i]]))
                                if (np.sum(num_sample[closest_index_kd[i]]))!=0 else np.ones((3,3))*np.nan for i, pt in enumerate(sample)])
                     covariance=np.asarray(cov_smooth)
@@ -329,11 +376,14 @@ class Local_Covariance_Trainer:
             sample_tree=KDTree(sample)
             _,closest_index_kd=sample_tree.query(target, k=1)
             covariance=[covariance[idx] for idx in closest_index_kd]
+                    
         return covariance
     
     @staticmethod
-    def learn_local_covariance(sample_clouds, target_cloud, k_smoothing=250, voxel_ds=0, method='mean',neighborhood='nn'):
+    def learn_local_covariance(sample_clouds, target_cloud, k_smoothing=250, voxel_ds=0,regularize=0.1, method='mean',neighborhood='nn'):
         mean,covariance, num_sample=Local_Covariance_Trainer.local_covariance(sample_clouds,target_cloud)
         cov_smooth=Local_Covariance_Trainer.covariance_smoothing(target_cloud,covariance,num_sample,voxel_ds, method, neighborhood, k=k_smoothing)
+        
+        cov_smooth=np.asarray([cov+np.eye(3)*regularize for cov in cov_smooth])
         cov_inv=np.asarray([np.linalg.inv(cov) if np.linalg.det(cov)!=0 else np.matrix(np.ones((3,3)) * np.inf) for cov in cov_smooth])
         return mean, cov_inv, num_sample, cov_smooth
