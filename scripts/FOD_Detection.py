@@ -136,9 +136,10 @@ class FOD_Detector:
         else:
             cutoff=params['m-dist cutoff']
 
-        fods=cloud_vox.select_by_index(np.where(dist>=cutoff)[0])
-        tank=cloud_vox.select_by_index(np.where(dist<cutoff)[0])
-        
+        # fods=cloud_vox.select_by_index(np.where(dist>=cutoff)[0])
+        # tank=cloud_vox.select_by_index(np.where(dist<cutoff)[0])
+        fods, tank, fod_mdist =pclib.Isolate_FOD(cloud_vox, dist, cutoff)
+
         self.fod_dist=dist[dist>=cutoff]
         fods.paint_uniform_color([1,0,0])
         tank.paint_uniform_color([0.2, 0.2 ,0.2])
@@ -159,27 +160,29 @@ class FOD_Detector:
         else:
             cutoff=self.params['fod_detection']["m-dist cluster cutoff"]
 
-        points=np.asarray(cloud.points)
-        if len(points)<=minsize:
-            print("no fod")
-            return
-        labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)-1
-        num_point=np.bincount(labels)
-        print(num_point)
-        clouds=[]
-        dists=[]
-        for i in range(max(labels)+1):
-            if num_point[i]>=minsize:
-                pointlist=[points[j] for j in range(len(points)) if i==labels[j]]
-                if len(dist)!=0:
-                    dists+=[[dist[j] for j in range(len(points)) if i==labels[j]]]
-                clouds.append(pclib.Cloud_from_points(pointlist))
-        for i in range(len(clouds)):
-            rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
-            clouds[i].paint_uniform_color(rgb)
+        # points=np.asarray(cloud.points)
+        # if len(points)<=minsize:
+        #     print("no fod")
+        #     return
+        # labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)-1
+        # num_point=np.bincount(labels)
+        # print(num_point)
+        # clouds=[]
+        # dists=[]
+        # for i in range(max(labels)+1):
+        #     if num_point[i]>=minsize:
+        #         pointlist=[points[j] for j in range(len(points)) if i==labels[j]]
+        #         if len(dist)!=0:
+        #             dists+=[[dist[j] for j in range(len(points)) if i==labels[j]]]
+        #         clouds.append(pclib.Cloud_from_points(pointlist))
+        # for i in range(len(clouds)):
+        #     rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
+        #     clouds[i].paint_uniform_color(rgb)
             
-        self.fods_list=clouds
-        self.fod_dist=dists
+        FOD_clusters, cluster_dists=pclib.Fod_clustering(cloud,minsize, cutoff,dist)
+
+        self.fods_list=FOD_clusters
+        self.fod_dist=cluster_dists
         
     def Cluster_centroid(self):
         '''
@@ -188,24 +191,25 @@ class FOD_Detector:
         clusters=self.fods_list
         weights=self.fod_dist
         centroids=[]
-        for i, cluster in enumerate(clusters):
-            points=np.asarray(cluster.points)
-            centroids.append(np.average(points,axis=0, weights=weights[i]))
-        
+        # for i, cluster in enumerate(clusters):
+        #     points=np.asarray(cluster.points)
+        #     centroids.append(np.average(points,axis=0, weights=weights[i]))
+        centroids=pclib.Cluster_centroid(clusters, weights=weights)
+
         self.fod_centroids=np.asarray(centroids)
     
     
-    def plot_fod_centroid(self):
-        centroids=self.fod_centroids
-        base_pc=self.cloud
-        spheres=[]
-        for points in centroids:
-            spheres.append(o3d.geometry.TriangleMesh.create_sphere(radius=0.05))
-            tf=np.eye(4)
-            tf[0:3,3]=points
-            spheres[-1]=spheres[-1].transform(tf)
-            spheres[-1].paint_uniform_color([1,0,0])
-        o3d.visualization.draw_geometries([base_pc]+spheres)
+    # def plot_fod_centroid(self):
+    #     centroids=self.fod_centroids
+    #     base_pc=self.cloud
+    #     spheres=[]
+    #     for points in centroids:
+    #         spheres.append(o3d.geometry.TriangleMesh.create_sphere(radius=0.05))
+    #         tf=np.eye(4)
+    #         tf[0:3,3]=points
+    #         spheres[-1]=spheres[-1].transform(tf)
+    #         spheres[-1].paint_uniform_color([1,0,0])
+    #     o3d.visualization.draw_geometries([base_pc]+spheres)
     
     def Project_obsticles(self):
         '''
@@ -239,9 +243,11 @@ class FOD_Detector:
         #cluster 
         self.Fod_clustering()
         self.Cluster_centroid()
-        
+        if (Loop_input("Plot Clustes?")):
+            o3d.visualization.draw_geometries(self.fods_list+[self.tank], window_name="Clustering")
+
         if (Loop_input("Plot FOD centroids?")):
-            self.plot_fod_centroid()
+            pclib.plot_fod_centroid(self.cloud, self.fod_centroids, window_name="FOD candidates")
         
         # project obsticles 
         self.Project_obsticles()
