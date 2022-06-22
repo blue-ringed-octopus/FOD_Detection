@@ -58,6 +58,7 @@ class FOD_Detector:
         self.fetcher=save_cloud.Pointcloud_fetcher(icp_thres,reference_cloud_uri)
         self.fetcher.get_raw_cloud()
         self.raw_cloud=self.fetcher.raw_cloud
+        self.fetcher.save_raw_cloud()
         
     def process_cloud(self):
         '''
