@@ -74,6 +74,8 @@ class FOD_Detector:
         icp_thres=params["icp_threshold"]
         icp_tf_init=np.asarray(params["icp_tf_init"])
         bound=self.reference_cloud_info['bound']
+        bound[2,1]=0.6
+
         cloud_sparse=cloud.voxel_down_sample(0.05)
         tf=(o3d.pipelines.registration.registration_icp(
             cloud_sparse, self.ref_cloud, icp_thres, icp_tf_init,
