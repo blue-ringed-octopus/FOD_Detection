@@ -63,6 +63,6 @@ def navigate2point(coordinates):
 
 if __name__ == '__main__':
 	rospy.init_node('simple_move')
-	navigate2point([-0.648, 1.8, -0.602, 0.798])
+	navigate2point([0.2864026072192606, -1.3936570006325406, 0.19918733752180848, -0.9799614301445609])
 
 
