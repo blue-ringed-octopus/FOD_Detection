@@ -89,7 +89,7 @@ class FOD_Detector:
         self.cloud=cloud.select_by_index(in_bound)
        
         rospy.loginfo("Creating KD-tree")
-        self.cloud_ds,_=pclib.random_downsample(cloud, params["downsample_rate"])
+        self.cloud_ds,_=pclib.random_downsample(self.cloud, params["downsample_rate"])
         self.cloud_ds_tree=KDTree(np.asarray(self.cloud_ds.points))
             
    
