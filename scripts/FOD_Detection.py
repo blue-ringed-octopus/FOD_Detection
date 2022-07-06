@@ -90,7 +90,7 @@ class FOD_Detector:
         self.cloud_ds,_=pclib.random_downsample(self.cloud, params["downsample_rate"])
         self.cloud_ds_tree=KDTree(np.asarray(self.cloud_ds.points))
         if (loop_input("Save processed cloud?")):
-            filename_num=save_cloud.get_file_name(os.path.expanduser("~/output/"), file_name="Raw_Cloud_opt")
+            filename_num=save_cloud.get_file_name(os.path.expanduser("~/output/"), file_name="Raw_Cloud_opt", file_format="pcd")
             print("saved to: "+filename_num)    
             o3d.io.write_point_cloud(filename_num, self.cloud)
 
@@ -212,10 +212,10 @@ class FOD_Detector:
         #cluster 
         self.Fod_clustering()
         self.Cluster_centroid()
-        if (Loop_input("Plot Clustes?")):
+        if (loop_input("Plot Clustes?")):
             o3d.visualization.draw_geometries(self.fods_list+[self.tank], window_name="Clustering")
 
-        if (Loop_input("Plot FOD centroids?")):
+        if (loop_input("Plot FOD centroids?")):
             pclib.plot_fod_centroid(self.cloud, self.fod_centroids, window_name="FOD candidates")
         
         # project obsticles 
