@@ -13,12 +13,10 @@ import rospy
 import rospkg
 import open3d as o3d
 import save_cloud
-import colorsys as cs
 import Local_Covariance_Trainer as pclib
-from scipy.cluster import hierarchy
 from scipy.spatial import KDTree
-
-def Loop_input(prompt):
+import os 
+def loop_input(prompt):
     	inp=""
     	while inp.lower()!='y' and inp.lower()!='n':
     		inp=input(prompt+"(y/n): \n")
@@ -91,8 +89,11 @@ class FOD_Detector:
         rospy.loginfo("Creating KD-tree")
         self.cloud_ds,_=pclib.random_downsample(self.cloud, params["downsample_rate"])
         self.cloud_ds_tree=KDTree(np.asarray(self.cloud_ds.points))
-            
-   
+        if (loop_input("Save processed cloud?")):
+            filename_num=save_cloud.get_file_name(os.path.expanduser("~/output/"), file_name="Raw_Cloud_opt")
+            print("saved to: "+filename_num)    
+            o3d.io.write_point_cloud(filename_num, self.cloud)
+
     def calculate_discrep(self):
         '''
         calculate discrepency from map to reference pointcloud
@@ -162,25 +163,6 @@ class FOD_Detector:
             cutoff=self.params['fod_detection']["L2-dist cluster cutoff"]
         else:
             cutoff=self.params['fod_detection']["m-dist cluster cutoff"]
-
-        # points=np.asarray(cloud.points)
-        # if len(points)<=minsize:
-        #     print("no fod")
-        #     return
-        # labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)-1
-        # num_point=np.bincount(labels)
-        # print(num_point)
-        # clouds=[]
-        # dists=[]
-        # for i in range(max(labels)+1):
-        #     if num_point[i]>=minsize:
-        #         pointlist=[points[j] for j in range(len(points)) if i==labels[j]]
-        #         if len(dist)!=0:
-        #             dists+=[[dist[j] for j in range(len(points)) if i==labels[j]]]
-        #         clouds.append(pclib.Cloud_from_points(pointlist))
-        # for i in range(len(clouds)):
-        #     rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
-        #     clouds[i].paint_uniform_color(rgb)
             
         FOD_clusters, cluster_dists=pclib.Fod_clustering(cloud,minsize, cutoff,dist)
 
@@ -194,26 +176,10 @@ class FOD_Detector:
         clusters=self.fods_list
         weights=self.fod_dist
         centroids=[]
-        # for i, cluster in enumerate(clusters):
-        #     points=np.asarray(cluster.points)
-        #     centroids.append(np.average(points,axis=0, weights=weights[i]))
         centroids=pclib.Cluster_centroid(clusters, weights=weights)
 
         self.fod_centroids=np.asarray(centroids)
-    
-    
-    # def plot_fod_centroid(self):
-    #     centroids=self.fod_centroids
-    #     base_pc=self.cloud
-    #     spheres=[]
-    #     for points in centroids:
-    #         spheres.append(o3d.geometry.TriangleMesh.create_sphere(radius=0.05))
-    #         tf=np.eye(4)
-    #         tf[0:3,3]=points
-    #         spheres[-1]=spheres[-1].transform(tf)
-    #         spheres[-1].paint_uniform_color([1,0,0])
-    #     o3d.visualization.draw_geometries([base_pc]+spheres)
-    
+        
     def Project_obsticles(self):
         '''
         project potential obsticles from the map to the ground plane for waypoint generation
