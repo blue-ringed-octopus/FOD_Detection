@@ -25,11 +25,11 @@ def loop_input(prompt):
            save=inp.lower()=='y'
        return save
    
-def get_file_name(path, file_name):
+def get_file_name(path, file_name, file_format):
 	i=0
-	while os.path.exists(path+file_name+"_"+str(i)+".mat"):
+	while os.path.exists(path+file_name+"_"+str(i)+"."+file_format):
 		i=i+1
-	return (path+file_name+"_"+str(i)+".mat")   
+	return (path+file_name+"_"+str(i)+"."+file_format)   
 
 class Pointcloud_fetcher:
     '''
@@ -90,7 +90,7 @@ class Pointcloud_fetcher:
     
     def save_mat(self, path, file_name, cloud):
     	mdic={"cloud":np.asarray(cloud.points), "rgb":np.asarray(cloud.colors)}
-    	filename_num=get_file_name(path, file_name)
+    	filename_num=get_file_name(path, file_name, "mat")
     	io.savemat(filename_num, mdic)
     	print("saved to: "+filename_num)
     
