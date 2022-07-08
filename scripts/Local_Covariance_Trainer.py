@@ -99,23 +99,6 @@ def random_downsample(cloud, percentage):
     cloud_ds=cloud.select_by_index(idx)
     return cloud_ds, idx
 
-# def Fod_clustering(points, minsize, cutoff):
-#  	labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)
-#  	num_point=np.bincount(labels)
-#  	print(num_point)
-#  	clouds=[]
-#  	for i in range(max(labels)):
-#          if num_point[i+1]>=minsize:
-#              pointlist=[]
-#              for j in range(len(points)):
-#                  if i+1==labels[j]:
-#                      pointlist.append(points[j])
-#              clouds.append(Cloud_from_points(pointlist))
-#  	for i in range(len(clouds)):
-#          rgb=cs.hsv_to_rgb(float(i)/len(clouds),1,1)
-#          clouds[i].paint_uniform_color(rgb)
-#  	return clouds
-
 def Cloud_from_points(points, rgb=None):
     '''
     creat point cloud object from list of points
@@ -150,7 +133,7 @@ def crop_cloud_par(cloud,lim):
     return np.where(in_bound)[0]
     
 @cuda.jit()
-def mean_blur_kernel(d_out, d_cloud, d_neighbors,d_dists_mat):
+def mean_blur_kernel(d_out, d_cloud, d_neighbors,d_dists_mat, d_weights):
     '''
     kernel to calculate mean intensity from nearest neighbors
     input: d_out: device array to store mean intensity for each point
@@ -163,24 +146,28 @@ def mean_blur_kernel(d_out, d_cloud, d_neighbors,d_dists_mat):
     i=cuda.grid(1)
     if i<nx:
         d_out[i]=0
+        weight_sum=0
         for j in d_neighbors[i]:
             d_out[i]+=d_dists_mat[j]
-        d_out[i]= d_out[i]/d_neighbors[i].shape[0]
+            weight_sum+=d_weights[j]
+    #    d_out[i]= d_out[i]/d_neighbors[i].shape[0]
+        d_out[i]= d_out[i]/weight_sum
     
-def mean_blur_par(cloud, dists_mat, tree, num_neighbors):
+def mean_blur_par(cloud, dists_mat, tree, num_neighbors, weights):
     '''
     Wrapper for mean blur kernel
     '''
-    _,nn=tree.query(cloud, k=num_neighbors)
-    nn=nn.astype(np.int32)    
+    _,neighbors=tree.query(cloud, k=num_neighbors)
+    neighbors=neighbors.astype(np.int32)    
     nx=cloud.shape[0]
     d_cloud=cuda.to_device(cloud)
-    d_neighbors=cuda.to_device(nn)
+    d_neighbors=cuda.to_device(neighbors)
     d_dists_mat=cuda.to_device(dists_mat)
+    d_weights=cuda.to_device(weights)
     d_out=cuda.device_array(nx,dtype=np.float32)
     thread=(TPB)
     blocks=(nx+TPB-1)//TPB
-    mean_blur_kernel[blocks, thread](d_out,d_cloud, d_neighbors, d_dists_mat)
+    mean_blur_kernel[blocks, thread](d_out,d_cloud, d_neighbors, d_dists_mat,d_weights)
     
     return d_out.copy_to_host()
     
@@ -274,10 +261,13 @@ def gaussian_blur(points, cloud, mdist):
 		region_mdist.append(wMDist/sumW)
 	return np.asarray(region_mdist)
     
-def multi_blur(cloud,sample_points, distance, cloud_tree, num_iter,k=150, method='mean'):
+def multi_blur(cloud,sample_points, distance, cloud_tree, num_iter, weights=[],k=150, method='mean'):
+    if len(weights)==0:
+        weights=np.ones(len(np.asarray(cloud.points)))
+        
     if method=='mean':
         for i in range(num_iter):
-            blur_dist=mean_blur_par(np.asarray(cloud.points), distance, cloud_tree, k)
+            blur_dist=mean_blur_par(np.asarray(cloud.points), distance, cloud_tree, k, weights)
             distance=blur_dist
     else:
         for i in range(num_iter):
