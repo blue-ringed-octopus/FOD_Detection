@@ -6,15 +6,20 @@ Created on Fri Feb  05 23:13:00 2021
 
 @author: Benjamin
 """
+import rospkg
 import rospy 
 from FOD_Detection import FOD_Detector
-import numpy as np
 import tank_loop_nav as tl
 from waypoint_generation import Waypoint_Generator
 import greedy_scheduler as gs
 import navigate_to_point as n2p
 from std_srvs.srv import Empty
 from nav_msgs.msg import OccupancyGrid
+from waypoint_generation import parse_map_msg
+import yaml
+
+rospack=rospkg.RosPack()
+navsea=rospack.get_path('navsea')
 
 def loop_input():
 	inp=""
@@ -60,9 +65,12 @@ if __name__ == "__main__":
 
         waypoints=[]
         print("Calculating waypoint location...")
+        with open(navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
+            waypoint_params= yaml.safe_load(file)
         topic="/move_base/global_costmap/costmap"
         map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
-        waypoint_generator=Waypoint_Generator(map_data, tf, verbose=False)
+        origin, map_array=parse_map_msg(map_data)
+        waypoint_generator=Waypoint_Generator(map_array, origin, tf,params=waypoint_params, verbose=False)
         
         for point in objectPoints:
             waypoints.append(waypoint_generator.generate_waypoint(point))

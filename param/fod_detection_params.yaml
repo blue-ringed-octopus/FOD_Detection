@@ -5,6 +5,7 @@ preprocess:
     denoise_neighbor: 50
     denoise_std: 2.0
     downsample_rate: 0.1
+    zbound: 0.5
 
 fod_detection:
     cloud_info_uri: /home/navsea-jetson/catkin_ws/src/navsea/resource/mean_cloud_info.p    
@@ -13,8 +14,8 @@ fod_detection:
 
 smoothing:
     method: knn
-    k: 100
-    iteration: 4
+    k: 50 #100
+    iteration: 1 #4
 
 clustering:
     minimum_fod_point_count: 2

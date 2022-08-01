@@ -5,28 +5,43 @@ Created on Sun Jan  3 10:13:17 2021
 
 @author: wade
 """
-import rospkg
-import rospy 
-import pickle
 import numpy as np
 import random
 from numpy import sqrt, sin, cos, nan
 from math import atan2
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
-from nav_msgs.msg import OccupancyGrid
 from sklearn.neighbors import NearestNeighbors
 import yaml
+from numba import cuda
+import math
 
+def parse_map_msg(map_msg):
+    w = map_msg.info.width
+    map_array = []
+    row_buffer = []
+    first_row = False
+    for i in range(len(map_msg.data)):
+        row_buffer += [map_msg.data[i]]
+        if i%(w-1) == 0 and i != 0 and first_row == False:
+            map_array += [row_buffer]
+            row_buffer = []  
+            first_row = True
+        elif (i+1)%w == 0 and first_row == True:
+            map_array += [row_buffer]
+            row_buffer = []
+    map_array = np.array(map_array).transpose()  
+    
+    origin=np.asarray([map_msg.info.origin.position.x, map_msg.info.origin.position.y])
+    costmap=map_array
+    
+    return origin, costmap
+    
 class Waypoint_Generator: 
     '''
     Contructor
     '''
-    def __init__(self,map_msg, tf, obstacle_points=[], verbose=False):
-        rospack=rospkg.RosPack()
-        self.navsea=rospack.get_path('navsea')
-        with open(self.navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
-            params= yaml.safe_load(file)
+    def __init__(self,costmap, origin, tf,params, obstacle_points=[], verbose=False):
         self.tf_m2r=tf
         self.tf_r2m=np.linalg.inv(tf)
         self.robot_radius=params["robot_radius"]
@@ -36,29 +51,13 @@ class Waypoint_Generator:
         self.obstacle_points=obstacle_points
         self.cost_threshold=params["cost_threshold"]
         self.ray_sim_step=params["ray_sim_step"]
-        self.parse_map_msg(map_msg)
+        self.costmap=costmap
+        self.origin=origin
         self.generate_tree()
         self.verbose=verbose
         self.plot=verbose
     
-    def parse_map_msg(self,map_msg):
-        w = map_msg.info.width
-        map_array = []
-        row_buffer = []
-        first_row = False
-        for i in range(len(map_msg.data)):
-            row_buffer += [map_msg.data[i]]
-            if i%(w-1) == 0 and i != 0 and first_row == False:
-                map_array += [row_buffer]
-                row_buffer = []  
-                first_row = True
-            elif (i+1)%w == 0 and first_row == True:
-                map_array += [row_buffer]
-                row_buffer = []
-        map_array = np.array(map_array).transpose()  
-        
-        self.origin=map_msg.info.origin.position
-        self.costmap=map_array
+    
     
     def project_tf(self, tf, points):
         #print(np.asarray(points).shape[1])
@@ -72,13 +71,13 @@ class Waypoint_Generator:
         return np.transpose(newPoints)
     
     def index2point(self, waypoint_indicies): 
-        points = [ np.append(index[0]*self.resolution + self.origin.x, 
-    		index[1]*self.resolution + self.origin.y) for index in waypoint_indicies]
+        points = [ np.append(index[0]*self.resolution + self.origin[0], 
+    		index[1]*self.resolution + self.origin[1]) for index in waypoint_indicies]
         return np.asarray(points)
     
     def point2index(self, point):
-        index=np.array([abs(round((self.origin.x-point[0])/self.resolution)),
-                                    abs(round((self.origin.y-point[1])/self.resolution))])
+        index=np.array([abs(round((self.origin[0]-point[0])/self.resolution)),
+                                    abs(round((self.origin[1]-point[1])/self.resolution))])
         return np.asarray(index).astype(int)
     
     def waypoint_indicies_to_msg(self, object_point, waypoint_indicies):
@@ -92,8 +91,9 @@ class Waypoint_Generator:
         y_obj=p_obj[1]
     
         theta = atan2(y_obj-y, x_obj-x)
-        z = np.sin(theta/2)
         w = np.cos(theta/2)
+        z = np.sin(theta/2)
+        
         return [x, y, w, z]
     
     ##==================== Waypoint msgs ====================#:
@@ -143,16 +143,58 @@ class Waypoint_Generator:
         candidates=candidates[idx[0]]
         return candidates
     
+    @staticmethod
+    @cuda.jit
+    def filter_ray_trace_kernel(d_out, d_costmap, d_candidates, d_point, step_size):
+        i=cuda.grid(1)
+        save_candidate=True
+        if i < d_out.shape[0]:
+            d_out[i]=0
+            candidate=d_candidates[i]
+            r = math.sqrt((candidate[0] - d_point[0])**2 + (candidate[1] - d_point[1])**2)
+            theta = atan2((d_point[1] - candidate[1]), (d_point[0] - candidate[0]))
+            x_pos = candidate[0]
+            y_pos = candidate[1]
+            distance = 0
+            ray_cost = 0
+            while distance < r:
+                x_pos += step_size*math.cos(theta)
+                y_pos += step_size*math.sin(theta)
+                if int(round(x_pos))>=d_costmap.shape[0] or int(round(y_pos))>=d_costmap.shape[1]:
+                    continue
+                else:
+                    ray_cost += d_costmap[int(round(x_pos)), int(round(y_pos))]
+                    distance = math.sqrt((x_pos-candidate[0])**2 + (y_pos-candidate[1])**2)
+                    if d_costmap[int(round(x_pos)), int(round(y_pos))] >= np.inf or int(round(x_pos))>=d_costmap.shape[0] or int(round(y_pos))>=d_costmap.shape[1]:
+                        save_candidate = False
+                        break
+            if save_candidate:
+                d_out[i] += ray_cost
+            else:
+                d_out[i] =-1
+        
+    def filter_raytrace_par(self, candidates, point):
+        nx=candidates.shape[0]
+        d_candidates=cuda.to_device(candidates)
+        d_point=cuda.to_device(point)
+        d_out=cuda.device_array(nx,dtype=np.float32)
+        d_costmap=cuda.to_device(self.costmap)
+        TPB=128
+        threads = (TPB)
+        blocks=(nx+TPB-1)//TPB
+        self.filter_ray_trace_kernel[blocks, threads](d_out,d_costmap, d_candidates, d_point,self.ray_sim_step)
+        cost=d_out.copy_to_host()
+        return candidates[cost>=0], cost[cost>=0]
+    
     def filter_raytrace(self, candidates, point):
-        verbose=self.verbose
         costmap=self.costmap
         step=self.ray_sim_step
         new_candidates = []
         ray_costs = []
         for candidate in candidates:
-            if verbose:
+            if self.verbose:
                 print("candidate", candidate)
-            save_candidate = True
+            save_candidate=True
             r = sqrt((candidate[0] - point[0])**2 + (candidate[1] - point[1])**2)
             theta = atan2((point[1] - candidate[1]), (point[0] - candidate[0]))
             x_pos = candidate[0]
@@ -253,7 +295,7 @@ class Waypoint_Generator:
             plt.show()
         if verbose:
             print("raytracing candidates")
-        candidates, ray_costs = self.filter_raytrace(candidates, object_index)  
+        candidates, ray_costs = self.filter_raytrace_par(candidates, object_index)  
         if candidates.size == 0:
             print('waypoint_generation: Error: could not generate point, retry with increased tolerance')
             return nan, flag
@@ -304,15 +346,23 @@ class Waypoint_Generator:
             return waypoint_indicies
     
 if __name__ == "__main__": 
+    import rospy 
+    import rospkg
+    from nav_msgs.msg import OccupancyGrid
+
     topic="/move_base/global_costmap/costmap"
     rospy.init_node('FOD_Detection',anonymous=False)
     map_data = rospy.wait_for_message(topic, OccupancyGrid, timeout=5)
+    origin, map_array=parse_map_msg(map_data)
+
     tf=np.eye(4)
-# pkl_filename = "cad_costmap.pkl"
-# with open(self.navsea+"/scripts/"+pkl_filename, 'rb') as file:
-#     costmap= pickle.load(file) # replace to be recieved from msg 
+    rospack=rospkg.RosPack()
+    navsea=rospack.get_path('navsea')
+    with open(navsea+"/param/waypoint_generation_params.yaml", 'r') as file:
+        params= yaml.safe_load(file)
     test_points=[[ 1.5, -0.5,  0]]
-    waypoint_generator=Waypoint_Generator(map_data, tf,verbose=True)
+    waypoint_generator=Waypoint_Generator(map_array , origin, tf, params,verbose=True)
+
     for test_point in test_points:
         test_point = np.array(test_point)
         waypoint=waypoint_generator.generate_waypoint(test_point)

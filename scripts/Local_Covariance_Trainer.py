@@ -29,7 +29,6 @@ def Fod_clustering(cloud, minsize, cutoff, dist=[]):
         return [],[]
     labels=hierarchy.fclusterdata(points, criterion='distance',t=cutoff)-1
     num_point=np.bincount(labels)
-    print(num_point)
     clouds=[]
     dists=[]
     for i in range(max(labels)+1):
@@ -148,7 +147,7 @@ def mean_blur_kernel(d_out, d_cloud, d_neighbors,d_dists_mat, d_weights):
         d_out[i]=0
         weight_sum=0
         for j in d_neighbors[i]:
-            d_out[i]+=d_dists_mat[j]
+            d_out[i]+=d_weights[j]*d_dists_mat[j]
             weight_sum+=d_weights[j]
     #    d_out[i]= d_out[i]/d_neighbors[i].shape[0]
         d_out[i]= d_out[i]/weight_sum

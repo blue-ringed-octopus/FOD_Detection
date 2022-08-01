@@ -19,20 +19,20 @@ from nav_msgs.msg import OccupancyGrid
 
 resolution = 0.01
 kernel_size=(5,5)
-# Initialize topics to publish:
+# Initialize messages to publish:
 map_pub = rospy.Publisher('/map', OccupancyGrid, queue_size=1)
 
-##==================== Map Topics ====================#:
+##==================== Map messages ====================#:
     
-def topic_to_array(topic):
+def message_to_array(message):
     global resolution
-    w = topic.info.width
-    h = topic.info.height
+    w = message.info.width
+    h = message.info.height
     map_array = []
     row_buffer = []
     first_row = False
-    for i in range(len(topic.data)):
-        row_buffer += [topic.data[i]]
+    for i in range(len(message.data)):
+        row_buffer += [message.data[i]]
         if i%(w-1) == 0 and i != 0 and first_row == False:
             map_array += [row_buffer]
             row_buffer = []  
@@ -41,7 +41,7 @@ def topic_to_array(topic):
             map_array += [row_buffer]
             row_buffer = []
     map_array = np.array(map_array).transpose()
-    origin = [abs(round(topic.info.origin.position.x/resolution)), abs(round(topic.info.origin.position.y/resolution))]    
+    origin = [abs(round(message.info.origin.position.x/resolution)), abs(round(message.info.origin.position.y/resolution))]    
     wh = [w,h]
     return map_array, origin, wh
 
@@ -62,34 +62,34 @@ def array_to_image(map_array, prob_threshold=100):
 
 ##==================== Map Publish ====================#:
     
-def publish_map_img(map_img, map_origin, prev_topic):
-    #reuse parts of old topic (e.g. header) - replace later
+def publish_map_img(map_img, map_origin, prev_message):
+    #reuse parts of old message (e.g. header) - replace later
     global resolution
     
-    topic = prev_topic
-    topic.info.width = int(round(map_img.shape[0]))
-    topic.info.height = int(round(map_img.shape[1]))
-   # topic.data= np.ndarray.flatten(np.transpose((((map_img/255*100)-100)*-1).astype(int)))
-    topic.data= (np.ndarray.flatten(np.transpose((((map_img/255*100)-100)*-1))).astype(np.int8)).tolist()
+    message = prev_message
+    message.info.width = int(round(map_img.shape[0]))
+    message.info.height = int(round(map_img.shape[1]))
+   # message.data= np.ndarray.flatten(np.transpose((((map_img/255*100)-100)*-1).astype(int)))
+    message.data= (np.ndarray.flatten(np.transpose((((map_img/255*100)-100)*-1))).astype(np.int8)).tolist()
  #   print(arr.shape)
-    #topic.data=arr.tolist()
- #   print(topic.data.shape)
-#    topic.info.origin.position.x = -map_origin[1]*resolution
-#    topic.info.origin.position.y = -map_origin[0]*resolution
-    map_pub.publish(topic)
+    #message.data=arr.tolist()
+ #   print(message.data.shape)
+#    message.info.origin.position.x = -map_origin[1]*resolution
+#    message.info.origin.position.y = -map_origin[0]*resolution
+    map_pub.publish(message)
     return
 
 ##==================== Parallel Search ====================#:
 
-def map_merge_parallel(rmap_topic):
+def map_merge_parallel(rmap_message):
     # turn to image
-    rmap_array, rmap_origin, rmap_wh = topic_to_array(rmap_topic)
+    rmap_array, rmap_origin, rmap_wh = message_to_array(rmap_message)
     rmap = array_to_image(rmap_array)
     # clean rtabmap map
     noise_ksize = kernel_size
     rmap = cv2.blur(rmap, noise_ksize)
     _, rmap = cv2.threshold(rmap,127,255,cv2.THRESH_BINARY)
-    publish_map_img(rmap, rmap_origin, rmap_topic)
+    publish_map_img(rmap, rmap_origin, rmap_message)
         
     return
 
